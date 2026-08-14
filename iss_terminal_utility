@@ -1,0 +1,40 @@
+#!/usr/bin/env python3
+import argparse
+import sys
+import logging
+
+import equipment_drivers
+from equipment_drivers.discovery import discover_and_instantiate
+
+logging.basicConfig(level=logging.INFO, format='%(levelname)s: %(message)s')
+logger = logging.getLogger("terminal_utility")
+
+def main():
+    parser = argparse.ArgumentParser(description="Terminal Server Utility")
+    parser.add_argument("--ip_address", required=True, help="IP address of the Terminal Server")
+    parser.add_argument("--port", type=int, default=22, help="Port of the Terminal Server (default: 22)")
+    
+    args = parser.parse_args()
+
+    driver = discover_and_instantiate(args.ip_address, args.port, "terminal_server")
+    if not driver:
+        logger.error("Failed to detect Terminal Server model or find suitable driver.")
+        sys.exit(1)
+
+    try:
+        driver.connect(args.ip_address, args.port)
+        print(f"Detected Model: {driver.get_model()}")
+
+        # For Terminal server we just dump status as basic example
+        status, raw = driver.get_status()
+        print(f"Terminal Server Status:\n{status}")
+        print(f"RAW_OUTPUT:\n{raw}")
+
+    except Exception as e:
+        logger.error(f"Error executing action: {e}")
+        sys.exit(1)
+    finally:
+        driver.disconnect()
+
+if __name__ == "__main__":
+    main()

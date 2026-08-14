@@ -1,0 +1,49 @@
+#!/usr/bin/env python3
+import argparse
+import sys
+import logging
+
+import equipment_drivers
+from equipment_drivers.discovery import discover_and_instantiate
+
+logging.basicConfig(level=logging.INFO, format='%(levelname)s: %(message)s')
+logger = logging.getLogger("daq_utility")
+
+def main():
+    parser = argparse.ArgumentParser(description="DAQ Utility")
+    parser.add_argument("--ip_address", required=True, help="IP address of the DAQ")
+    parser.add_argument("--port", type=int, default=502, help="Port of the DAQ (default: 502)")
+    parser.add_argument("action", choices=["start", "stop", "status"], help="Action to perform")
+
+    args = parser.parse_args()
+
+    driver = discover_and_instantiate(args.ip_address, args.port, "daq")
+    if not driver:
+        logger.error("Failed to detect DAQ model or find suitable driver.")
+        sys.exit(1)
+
+    try:
+        driver.connect(args.ip_address, args.port)
+        print(f"Detected Model: {driver.get_model()}")
+
+        if args.action == "start":
+            result, raw = driver.start_acquisition()
+            print("DAQ Acquisition Started.")
+            print(f"RAW_OUTPUT:\n{raw}")
+        elif args.action == "stop":
+            result, raw = driver.stop_acquisition()
+            print("DAQ Acquisition Stopped.")
+            print(f"RAW_OUTPUT:\n{raw}")
+        elif args.action == "status":
+            status, raw = driver.get_status()
+            print(f"DAQ Status: {status}")
+            print(f"RAW_OUTPUT:\n{raw}")
+
+    except Exception as e:
+        logger.error(f"Error executing action: {e}")
+        sys.exit(1)
+    finally:
+        driver.disconnect()
+
+if __name__ == "__main__":
+    main()
