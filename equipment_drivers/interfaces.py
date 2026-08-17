@@ -46,6 +46,18 @@ class PDUDriver(EquipmentDriver):
     def get_status(self, channel: int) -> PDUResponse:
         pass
 
+    @abstractmethod
+    def get_channel_count(self) -> int:
+        """
+        Total number of controllable channels/outlets on this PDU. Used to
+        expand 'all' in a channel spec (see channel_spec.py). Should reflect
+        the actual connected unit where possible (e.g. queried from the
+        device), not just a guess -- an overstated count would attempt writes
+        to channels that don't exist, an understated one would silently skip
+        real outlets.
+        """
+        pass
+
 class TerminalServerDriver(EquipmentDriver):
     @abstractmethod
     def get_status(self) -> Tuple[str, str]:

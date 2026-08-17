@@ -1,5 +1,6 @@
 import unittest
 from unittest.mock import patch, MagicMock
+import requests
 from equipment_drivers.pdu.wti_vmr_hd4d20 import WtiVmrHd4d20Driver
 
 class TestWtiVmrHd4d20Driver(unittest.TestCase):
@@ -83,6 +84,26 @@ class TestWtiVmrHd4d20Driver(unittest.TestCase):
 
     def test_get_model(self):
         self.assertEqual(self.driver.get_model(), "WTI VMR-HD4D20 C19")
+
+    @patch('equipment_drivers.pdu.wti_vmr_hd4d20.requests.Session.get')
+    def test_get_channel_count_from_device(self, mock_get):
+        self.driver.connected = True
+        self.driver.base_url = f"http://{self.ip}:{self.port}/api/v2"
+
+        mock_response = MagicMock()
+        mock_response.raise_for_status.return_value = None
+        mock_response.json.return_value = [{"id": i} for i in range(1, 9)]
+        mock_get.return_value = mock_response
+
+        self.assertEqual(self.driver.get_channel_count(), 8)
+
+    @patch('equipment_drivers.pdu.wti_vmr_hd4d20.requests.Session.get')
+    def test_get_channel_count_falls_back_on_error(self, mock_get):
+        self.driver.connected = True
+        self.driver.base_url = f"http://{self.ip}:{self.port}/api/v2"
+        mock_get.side_effect = requests.exceptions.ConnectionError("unreachable")
+
+        self.assertEqual(self.driver.get_channel_count(), WtiVmrHd4d20Driver.DEFAULT_CHANNEL_COUNT)
 
 if __name__ == '__main__':
     unittest.main()
