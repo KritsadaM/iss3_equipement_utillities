@@ -7,6 +7,7 @@ import logging
 # Ensure the equipment_drivers package is loaded
 import equipment_drivers
 from equipment_drivers.discovery import discover_and_instantiate
+from equipment_drivers.channel_spec import parse_channels
 
 logging.basicConfig(level=logging.INFO, format='%(levelname)s: %(message)s')
 logger = logging.getLogger("pdu_utility")
@@ -21,7 +22,9 @@ def main():
                          help="Password override for the PDU (falls back to PDU_PASSWORD env var, then driver default). "
                               "Prefer the env var over this flag to avoid the password showing up in shell history.")
     parser.add_argument("action", choices=["on", "off", "status"], help="Action to perform")
-    parser.add_argument("channel", type=int, help="Channel number")
+    parser.add_argument("channel", type=str,
+                         help="Channel spec: a single channel (3), a comma-separated list (3,4,5 or "
+                              "'3, 4, 5'), a range (3-6), a combination (1,3-5,8), or 'all'")
 
     args = parser.parse_args()
     username = args.username or os.environ.get("PDU_USERNAME")
@@ -42,26 +45,41 @@ def main():
         model = driver.get_model()
         print(f"Detected Model: {model}")
 
-        if args.action == "on":
-            response = driver.turn_on(args.channel)
-        elif args.action == "off":
-            response = driver.turn_off(args.channel)
-        else:
-            response = driver.get_status(args.channel)
-
-        response.model = model
-
-        if not response.success:
-            logger.error(f"Action '{response.action}' on channel {response.channel} failed.")
-            print(f"RAW_OUTPUT:\n{response.raw}")
+        # Only query the driver's channel count if 'all' was actually requested,
+        # to avoid an extra round-trip for the common single/list/range cases.
+        channel_count = driver.get_channel_count() if args.channel.strip().lower() == "all" else None
+        try:
+            channels = parse_channels(args.channel, channel_count=channel_count)
+        except ValueError as e:
+            logger.error(f"Invalid channel spec '{args.channel}': {e}")
             sys.exit(1)
 
-        if response.action == "get_status":
-            print(f"Channel {response.channel} Status: {response.status}")
-        else:
-            verb = "ON" if response.action == "turn_on" else "OFF"
-            print(f"Channel {response.channel} turned {verb} successfully.")
-        print(f"RAW_OUTPUT:\n{response.raw}")
+        any_failed = False
+        for channel in channels:
+            if args.action == "on":
+                response = driver.turn_on(channel)
+            elif args.action == "off":
+                response = driver.turn_off(channel)
+            else:
+                response = driver.get_status(channel)
+
+            response.model = model
+
+            if not response.success:
+                any_failed = True
+                logger.error(f"Action '{response.action}' on channel {response.channel} failed.")
+                print(f"RAW_OUTPUT:\n{response.raw}")
+                continue
+
+            if response.action == "get_status":
+                print(f"Channel {response.channel} Status: {response.status}")
+            else:
+                verb = "ON" if response.action == "turn_on" else "OFF"
+                print(f"Channel {response.channel} turned {verb} successfully.")
+            print(f"RAW_OUTPUT:\n{response.raw}")
+
+        if any_failed:
+            sys.exit(1)
 
     except Exception as e:
         logger.error(f"Error executing action: {e}")
