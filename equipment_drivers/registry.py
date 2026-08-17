@@ -31,5 +31,13 @@ class DriverRegistry:
             return []
         return list(self._registry[equipment_type].keys())
 
+    def get_all_drivers(self, equipment_type: str) -> list[tuple[str, Type[EquipmentDriver]]]:
+        """Return (signature, driver_class) pairs for every driver registered
+        under this equipment type, in registration order. Used by discovery
+        to ask each candidate driver to probe() itself."""
+        if equipment_type not in self._registry:
+            return []
+        return list(self._registry[equipment_type].items())
+
 # Global registry instance
 registry = DriverRegistry()
