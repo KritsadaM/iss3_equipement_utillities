@@ -1,7 +1,7 @@
 import logging
-from typing import Tuple
 from equipment_drivers.interfaces import PDUDriver
 from equipment_drivers.registry import registry
+from equipment_drivers.responses import PDUResponse
 
 logger = logging.getLogger(__name__)
 
@@ -11,7 +11,7 @@ class DummyPDUDriver(PDUDriver):
         self.port = 0
         self.connected = False
 
-    def connect(self, ip: str, port: int) -> bool:
+    def connect(self, ip: str, port: int, username: str = None, password: str = None) -> bool:
         self.ip = ip
         self.port = port
         self.connected = True
@@ -26,26 +26,26 @@ class DummyPDUDriver(PDUDriver):
     def get_model(self) -> str:
         return "Dummy PDU Model X"
 
-    def turn_on(self, channel: int) -> Tuple[bool, str]:
+    def turn_on(self, channel: int) -> PDUResponse:
         if not self.connected:
             raise Exception("Not connected to PDU")
         logger.info(f"Turning ON channel {channel} on Dummy PDU")
         raw_output = f"DUMMY_RAW: Channel {channel} set to 1"
-        return True, raw_output
+        return PDUResponse(success=True, action="turn_on", channel=channel, raw=raw_output)
 
-    def turn_off(self, channel: int) -> Tuple[bool, str]:
+    def turn_off(self, channel: int) -> PDUResponse:
         if not self.connected:
             raise Exception("Not connected to PDU")
         logger.info(f"Turning OFF channel {channel} on Dummy PDU")
         raw_output = f"DUMMY_RAW: Channel {channel} set to 0"
-        return True, raw_output
+        return PDUResponse(success=True, action="turn_off", channel=channel, raw=raw_output)
 
-    def get_status(self, channel: int) -> Tuple[str, str]:
+    def get_status(self, channel: int) -> PDUResponse:
         if not self.connected:
             raise Exception("Not connected to PDU")
         logger.info(f"Checking status for channel {channel} on Dummy PDU")
         raw_output = f"DUMMY_RAW: Channel {channel} is 1"
-        return "ON", raw_output
+        return PDUResponse(success=True, action="get_status", channel=channel, raw=raw_output, status="ON")
 
 # Register the driver
 registry.register('pdu', 'dummy_pdu_sig', DummyPDUDriver)
