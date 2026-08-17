@@ -9,12 +9,15 @@ logger = logging.getLogger(__name__)
 
 from typing import Tuple
 
-
 class WtiVmrHd4d20Driver(PDUDriver):
     """
     Driver for the WTI VMR-HD4D20 C19 Power Distribution Unit.
     Communicates via the WTI REST API.
     """
+    # Fallback channel count if the device can't be queried directly (see
+    # get_channel_count below). Guessed from the "HD4D20" model name --
+    # verify against real WTI API docs / hardware and correct if wrong.
+    DEFAULT_CHANNEL_COUNT = 20
 
     @classmethod
     def probe(cls, ip: str, port: int) -> bool:
@@ -33,13 +36,13 @@ class WtiVmrHd4d20Driver(PDUDriver):
         self.port = 80
         self.base_url = ""
         self.connected = False
-
+        
         # Default credentials; in a real app, these should be passed via config
         self.username = "admin"
         self.password = "admin"
         self.auth = HTTPBasicAuth(self.username, self.password)
         self.session = requests.Session()
-
+        
         # Timeout for API requests (seconds)
         self.timeout = 5
 
@@ -55,7 +58,7 @@ class WtiVmrHd4d20Driver(PDUDriver):
         if password is not None:
             self.password = password
         self.auth = HTTPBasicAuth(self.username, self.password)
-
+        
         # Test connection by fetching the device info
         try:
             response = self.session.get(f"{self.base_url}/status", auth=self.auth, timeout=self.timeout)
@@ -76,6 +79,27 @@ class WtiVmrHd4d20Driver(PDUDriver):
     def get_model(self) -> str:
         return "WTI VMR-HD4D20 C19"
 
+    def get_channel_count(self) -> int:
+        """
+        Tries GET /api/v2/plugs (assumed to return a list of plug entries)
+        to determine the real channel count for this connected unit. Falls
+        back to DEFAULT_CHANNEL_COUNT if the endpoint is unreachable or its
+        response shape doesn't match what's assumed here -- adjust both once
+        this is verified against real hardware / API docs.
+        """
+        if not self.connected:
+            raise Exception("Not connected to PDU")
+        try:
+            response = self.session.get(f"{self.base_url}/plugs", auth=self.auth, timeout=self.timeout)
+            response.raise_for_status()
+            data = response.json()
+            if isinstance(data, list):
+                return len(data)
+            logger.warning("Unexpected /plugs response shape; falling back to default channel count")
+        except requests.exceptions.RequestException as e:
+            logger.warning(f"Could not query channel count from WTI PDU, falling back to default: {e}")
+        return self.DEFAULT_CHANNEL_COUNT
+
     def _control_plug(self, channel: int, action: int) -> Tuple[bool, str]:
         """
         Internal method to control a plug.
@@ -83,10 +107,10 @@ class WtiVmrHd4d20Driver(PDUDriver):
         """
         if not self.connected:
             raise Exception("Not connected to PDU")
-
+            
         url = f"{self.base_url}/plugs/{channel}"
         payload = {"action": action}
-
+        
         try:
             response = self.session.put(url, json=payload, auth=self.auth, timeout=self.timeout)
             response.raise_for_status()
@@ -108,15 +132,15 @@ class WtiVmrHd4d20Driver(PDUDriver):
     def get_status(self, channel: int) -> PDUResponse:
         if not self.connected:
             raise Exception("Not connected to PDU")
-
+            
         url = f"{self.base_url}/plugs/{channel}"
-
+        
         try:
             response = self.session.get(url, auth=self.auth, timeout=self.timeout)
             response.raise_for_status()
             data = response.json()
             raw_text = response.text
-
+            
             # Assuming the API returns something like {"status": 1}
             status_code = data.get("status")
             if status_code == 1:
@@ -126,11 +150,10 @@ class WtiVmrHd4d20Driver(PDUDriver):
             else:
                 status = f"UNKNOWN ({status_code})"
             return PDUResponse(success=True, action="get_status", channel=channel, raw=raw_text, status=status)
-
+                
         except requests.exceptions.RequestException as e:
             logger.error(f"Failed to get status for plug {channel} on WTI PDU: {e}")
             raise Exception(f"WTI Plug Status API Error: {e}")
-
 
 # Register the driver
 registry.register('pdu', 'wti_vmr_hd4d20', WtiVmrHd4d20Driver)
