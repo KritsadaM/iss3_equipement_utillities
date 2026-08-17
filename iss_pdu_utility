@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 import argparse
+import os
 import sys
 import logging
 
@@ -14,10 +15,17 @@ def main():
     parser = argparse.ArgumentParser(description="PDU Control Utility")
     parser.add_argument("--ip_address", required=True, help="IP address of the PDU")
     parser.add_argument("--port", type=int, default=161, help="Port of the PDU (default: 161)")
+    parser.add_argument("--username", default=None,
+                         help="Username override for the PDU (falls back to PDU_USERNAME env var, then driver default)")
+    parser.add_argument("--password", default=None,
+                         help="Password override for the PDU (falls back to PDU_PASSWORD env var, then driver default). "
+                              "Prefer the env var over this flag to avoid the password showing up in shell history.")
     parser.add_argument("action", choices=["on", "off", "status"], help="Action to perform")
     parser.add_argument("channel", type=int, help="Channel number")
 
     args = parser.parse_args()
+    username = args.username or os.environ.get("PDU_USERNAME")
+    password = args.password or os.environ.get("PDU_PASSWORD")
 
     # Discover and instantiate driver
     driver = discover_and_instantiate(args.ip_address, args.port, "pdu")
@@ -26,21 +34,34 @@ def main():
         sys.exit(1)
 
     try:
-        driver.connect(args.ip_address, args.port)
-        print(f"Detected Model: {driver.get_model()}")
+        connected = driver.connect(args.ip_address, args.port, username=username, password=password)
+        if not connected:
+            logger.error("Failed to connect to PDU.")
+            sys.exit(1)
+
+        model = driver.get_model()
+        print(f"Detected Model: {model}")
 
         if args.action == "on":
-            result, raw = driver.turn_on(args.channel)
-            print(f"Channel {args.channel} turned ON successfully.")
-            print(f"RAW_OUTPUT:\n{raw}")
+            response = driver.turn_on(args.channel)
         elif args.action == "off":
-            result, raw = driver.turn_off(args.channel)
-            print(f"Channel {args.channel} turned OFF successfully.")
-            print(f"RAW_OUTPUT:\n{raw}")
-        elif args.action == "status":
-            status, raw = driver.get_status(args.channel)
-            print(f"Channel {args.channel} Status: {status}")
-            print(f"RAW_OUTPUT:\n{raw}")
+            response = driver.turn_off(args.channel)
+        else:
+            response = driver.get_status(args.channel)
+
+        response.model = model
+
+        if not response.success:
+            logger.error(f"Action '{response.action}' on channel {response.channel} failed.")
+            print(f"RAW_OUTPUT:\n{response.raw}")
+            sys.exit(1)
+
+        if response.action == "get_status":
+            print(f"Channel {response.channel} Status: {response.status}")
+        else:
+            verb = "ON" if response.action == "turn_on" else "OFF"
+            print(f"Channel {response.channel} turned {verb} successfully.")
+        print(f"RAW_OUTPUT:\n{response.raw}")
 
     except Exception as e:
         logger.error(f"Error executing action: {e}")
