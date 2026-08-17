@@ -5,44 +5,49 @@ from equipment_drivers.interfaces import EquipmentDriver
 
 logger = logging.getLogger(__name__)
 
-def probe_device(ip: str, port: int, equipment_type: str) -> Optional[str]:
-    """
-    Probes the device at the given IP and port to determine its signature.
-    In a real implementation, this would use SNMP, SSH, HTTP, etc.
-    For this dummy implementation, we simulate detection based on the IP address.
-    """
-    logger.info(f"Probing {ip}:{port} for {equipment_type} signature...")
-    
-    # Dummy probe logic:
-    if equipment_type == 'pdu':
-        if ip.endswith('.10'):
-            return "dummy_pdu_sig"
-        elif ip.endswith('.40'):
-            return "wti_vmr_hd4d20"
-    elif equipment_type == 'terminal_server':
-        if ip.endswith('.20'):
-            return "dummy_ts_sig"
-    elif equipment_type == 'daq':
-        if ip.endswith('.30'):
-            return "dummy_daq_sig"
-            
-    # Default fallback for testing
-    return f"dummy_{equipment_type}_sig"
 
 def discover_and_instantiate(ip: str, port: int, equipment_type: str) -> Optional[EquipmentDriver]:
     """
-    Discovers the device model and returns an instantiated driver.
+    Iterates every driver registered for `equipment_type` and asks each one,
+    via its probe() classmethod, whether it recognizes the device at ip:port.
+    Returns an instance of the first driver that positively identifies itself.
+
+    Drivers registered under the conventional fallback signature
+    "dummy_{equipment_type}_sig" are treated as a last-resort match rather
+    than being probed -- this preserves the original dev/test behavior where
+    an unrecognized device still gets a usable dummy driver instead of
+    failing outright. As real probe() detection gets implemented for more
+    vendors, this fallback naturally gets used less; it should eventually be
+    removed for equipment types where every real driver has proper detection.
     """
-    signature = probe_device(ip, port, equipment_type)
-    if not signature:
-        logger.error(f"Could not determine signature for {ip}:{port}")
+    candidates = registry.get_all_drivers(equipment_type)
+    if not candidates:
+        logger.error(f"No drivers registered for equipment type '{equipment_type}'")
         return None
-        
-    driver_class = registry.get_driver(equipment_type, signature)
-    if not driver_class:
-        logger.error(f"No driver found for {equipment_type} with signature {signature}")
-        return None
-        
-    logger.info(f"Found driver {driver_class.__name__} for {ip}:{port}")
-    driver_instance = driver_class()
-    return driver_instance
+
+    logger.info(f"Probing {ip}:{port} against {len(candidates)} registered {equipment_type} driver(s)...")
+
+    fallback_signature = f"dummy_{equipment_type}_sig"
+    fallback_class = None
+
+    for signature, driver_class in candidates:
+        if signature == fallback_signature:
+            # Held back for last -- only used if nothing positively matches.
+            fallback_class = driver_class
+            continue
+        try:
+            if driver_class.probe(ip, port):
+                logger.info(f"Matched {driver_class.__name__} (signature: {signature}) for {ip}:{port}")
+                return driver_class()
+        except Exception as e:
+            logger.warning(f"probe() raised for {driver_class.__name__} ({signature}): {e}")
+
+    if fallback_class:
+        logger.warning(
+            f"No driver positively identified {ip}:{port}; falling back to "
+            f"{fallback_class.__name__} (signature '{fallback_signature}')."
+        )
+        return fallback_class()
+
+    logger.error(f"No registered driver could identify device at {ip}:{port}")
+    return None

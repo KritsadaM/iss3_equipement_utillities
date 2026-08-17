@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 import argparse
+import os
 import sys
 import logging
 
@@ -13,9 +14,16 @@ def main():
     parser = argparse.ArgumentParser(description="DAQ Utility")
     parser.add_argument("--ip_address", required=True, help="IP address of the DAQ")
     parser.add_argument("--port", type=int, default=502, help="Port of the DAQ (default: 502)")
+    parser.add_argument("--username", default=None,
+                         help="Username override for the DAQ (falls back to DAQ_USERNAME env var, then driver default)")
+    parser.add_argument("--password", default=None,
+                         help="Password override for the DAQ (falls back to DAQ_PASSWORD env var, then driver default). "
+                              "Prefer the env var over this flag to avoid the password showing up in shell history.")
     parser.add_argument("action", choices=["start", "stop", "status"], help="Action to perform")
 
     args = parser.parse_args()
+    username = args.username or os.environ.get("DAQ_USERNAME")
+    password = args.password or os.environ.get("DAQ_PASSWORD")
 
     driver = discover_and_instantiate(args.ip_address, args.port, "daq")
     if not driver:
@@ -23,7 +31,10 @@ def main():
         sys.exit(1)
 
     try:
-        driver.connect(args.ip_address, args.port)
+        connected = driver.connect(args.ip_address, args.port, username=username, password=password)
+        if not connected:
+            logger.error("Failed to connect to DAQ.")
+            sys.exit(1)
         print(f"Detected Model: {driver.get_model()}")
 
         if args.action == "start":
