@@ -11,7 +11,7 @@ class DummyTSDriver(TerminalServerDriver):
         self.port = 0
         self.connected = False
 
-    def connect(self, ip: str, port: int) -> bool:
+    def connect(self, ip: str, port: int, username: str = None, password: str = None) -> bool:
         self.ip = ip
         self.port = port
         self.connected = True
