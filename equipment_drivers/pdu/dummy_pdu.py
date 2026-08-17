@@ -26,6 +26,11 @@ class DummyPDUDriver(PDUDriver):
     def get_model(self) -> str:
         return "Dummy PDU Model X"
 
+    def get_channel_count(self) -> int:
+        # Fixed for the dummy/simulated driver -- real drivers should query
+        # the actual connected unit instead of hardcoding this.
+        return 8
+
     def turn_on(self, channel: int) -> PDUResponse:
         if not self.connected:
             raise Exception("Not connected to PDU")
