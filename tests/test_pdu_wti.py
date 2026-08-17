@@ -19,6 +19,29 @@ class TestWtiVmrHd4d20Driver(unittest.TestCase):
         self.assertTrue(self.driver.connected)
         mock_get.assert_called_once()
 
+    @patch('equipment_drivers.pdu.wti_vmr_hd4d20.requests.Session.get')
+    def test_connect_with_credential_override(self, mock_get):
+        mock_response = MagicMock()
+        mock_response.raise_for_status.return_value = None
+        mock_get.return_value = mock_response
+
+        result = self.driver.connect(self.ip, self.port, username="custom_user", password="custom_pass")
+        self.assertTrue(result)
+        self.assertEqual(self.driver.username, "custom_user")
+        self.assertEqual(self.driver.password, "custom_pass")
+        self.assertEqual(self.driver.auth.username, "custom_user")
+        self.assertEqual(self.driver.auth.password, "custom_pass")
+
+    @patch('equipment_drivers.pdu.wti_vmr_hd4d20.requests.Session.get')
+    def test_connect_without_override_keeps_default_credentials(self, mock_get):
+        mock_response = MagicMock()
+        mock_response.raise_for_status.return_value = None
+        mock_get.return_value = mock_response
+
+        self.driver.connect(self.ip, self.port)
+        self.assertEqual(self.driver.username, "admin")
+        self.assertEqual(self.driver.password, "admin")
+
     @patch('equipment_drivers.pdu.wti_vmr_hd4d20.requests.Session.put')
     def test_turn_on(self, mock_put):
         self.driver.connected = True
@@ -29,9 +52,11 @@ class TestWtiVmrHd4d20Driver(unittest.TestCase):
         mock_response.text = "OK_RAW"
         mock_put.return_value = mock_response
 
-        result, raw = self.driver.turn_on(1)
-        self.assertTrue(result)
-        self.assertEqual(raw, "OK_RAW")
+        response = self.driver.turn_on(1)
+        self.assertTrue(response.success)
+        self.assertEqual(response.raw, "OK_RAW")
+        self.assertEqual(response.action, "turn_on")
+        self.assertEqual(response.channel, 1)
         mock_put.assert_called_once_with(
             f"http://{self.ip}:{self.port}/api/v2/plugs/1",
             json={"action": 1},
@@ -50,9 +75,11 @@ class TestWtiVmrHd4d20Driver(unittest.TestCase):
         mock_response.text = '{"status": 1}'
         mock_get.return_value = mock_response
 
-        status, raw = self.driver.get_status(2)
-        self.assertEqual(status, "ON")
-        self.assertEqual(raw, '{"status": 1}')
+        response = self.driver.get_status(2)
+        self.assertEqual(response.status, "ON")
+        self.assertEqual(response.raw, '{"status": 1}')
+        self.assertTrue(response.success)
+        self.assertEqual(response.channel, 2)
 
     def test_get_model(self):
         self.assertEqual(self.driver.get_model(), "WTI VMR-HD4D20 C19")
