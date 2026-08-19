@@ -1,4 +1,4 @@
-PKG_NAME=iss-equipment-utillities
+PKG_NAME=iss-equipment-utilities
 VERSION=1.0
 ARCH=all
 BUILD_DIR=build/$(PKG_NAME)_$(VERSION)-1_$(ARCH)
