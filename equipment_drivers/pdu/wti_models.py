@@ -17,6 +17,7 @@ class BaseWtiPduDriver(PDUDriver):
     MODEL_NAME = "WTI Switched PDU"
     DEFAULT_CHANNEL_COUNT = 8
     DEFAULT_PORT = 80
+    IP_SUFFIX = ""
 
     def __init__(self):
         self.ip = ""
@@ -28,6 +29,12 @@ class BaseWtiPduDriver(PDUDriver):
         self.auth = HTTPBasicAuth(self.username, self.password)
         self.session = requests.Session()
         self.timeout = 5
+
+    @classmethod
+    def probe(cls, ip: str, port: int) -> bool:
+        if cls.IP_SUFFIX:
+            return ip.endswith(cls.IP_SUFFIX)
+        return False
 
     def connect(self, ip: str, port: int, username: Optional[str] = None, password: Optional[str] = None) -> bool:
         self.ip = ip
@@ -122,59 +129,130 @@ class BaseWtiPduDriver(PDUDriver):
             raise Exception(f"WTI Plug Status API Error: {e}")
 
 
-# 1. WTI VMR-HD4D20 C19 (High Density 20 Outlets)
+# ==========================================
+# WTI VMR Series (High-Density Switched PDUs)
+# ==========================================
+
 class WtiVmrHd4d20Driver(BaseWtiPduDriver):
     MODEL_NAME = "WTI VMR-HD4D20 C19"
     DEFAULT_CHANNEL_COUNT = 20
+    IP_SUFFIX = ".40"
 
-    @classmethod
-    def probe(cls, ip: str, port: int) -> bool:
-        return ip.endswith('.40')
+class WtiVmr8Hd20Driver(BaseWtiPduDriver):
+    MODEL_NAME = "WTI VMR-8HD20 Switched PDU"
+    DEFAULT_CHANNEL_COUNT = 8
+    IP_SUFFIX = ".408"
 
-
-# 2. WTI VMR-16HD20 (High Density 16 Outlets)
 class WtiVmr16Hd20Driver(BaseWtiPduDriver):
     MODEL_NAME = "WTI VMR-16HD20 Switched PDU"
     DEFAULT_CHANNEL_COUNT = 16
+    IP_SUFFIX = ".41"
 
-    @classmethod
-    def probe(cls, ip: str, port: int) -> bool:
-        return ip.endswith('.41')
+class WtiVmr24Hd20Driver(BaseWtiPduDriver):
+    MODEL_NAME = "WTI VMR-24HD20 Switched PDU"
+    DEFAULT_CHANNEL_COUNT = 24
+    IP_SUFFIX = ".424"
 
 
-# 3. WTI NPS-8HD20 (Network Power Switch, 8 Outlets)
+# ==========================================
+# WTI NPS Series (Network Power Switches)
+# ==========================================
+
 class WtiNps8Hd20Driver(BaseWtiPduDriver):
     MODEL_NAME = "WTI NPS-8HD20 Network Power Switch"
     DEFAULT_CHANNEL_COUNT = 8
+    IP_SUFFIX = ".42"
 
-    @classmethod
-    def probe(cls, ip: str, port: int) -> bool:
-        return ip.endswith('.42')
+class WtiNps16Hd20Driver(BaseWtiPduDriver):
+    MODEL_NAME = "WTI NPS-16HD20 Network Power Switch"
+    DEFAULT_CHANNEL_COUNT = 16
+    IP_SUFFIX = ".416"
+
+class WtiNps24Hd20Driver(BaseWtiPduDriver):
+    MODEL_NAME = "WTI NPS-24HD20 Network Power Switch"
+    DEFAULT_CHANNEL_COUNT = 24
+    IP_SUFFIX = ".425"
 
 
-# 4. WTI IPS-800 (Internet Power Switch, 8 Outlets)
+# ==========================================
+# WTI IPS Series (Internet Power Switches)
+# ==========================================
+
+class WtiIps400Driver(BaseWtiPduDriver):
+    MODEL_NAME = "WTI IPS-400 Internet Power Switch"
+    DEFAULT_CHANNEL_COUNT = 4
+    IP_SUFFIX = ".404"
+
 class WtiIps800Driver(BaseWtiPduDriver):
     MODEL_NAME = "WTI IPS-800 Internet Power Switch"
     DEFAULT_CHANNEL_COUNT = 8
+    IP_SUFFIX = ".43"
 
-    @classmethod
-    def probe(cls, ip: str, port: int) -> bool:
-        return ip.endswith('.43')
+class WtiIps1600Driver(BaseWtiPduDriver):
+    MODEL_NAME = "WTI IPS-1600 Internet Power Switch"
+    DEFAULT_CHANNEL_COUNT = 16
+    IP_SUFFIX = ".417"
 
 
-# 5. WTI CPM-800 (Control Port Manager / Console Hybrid, 8 Outlets)
+# ==========================================
+# WTI CPM Series (Control Port Managers / Hybrid)
+# ==========================================
+
 class WtiCpm800Driver(BaseWtiPduDriver):
     MODEL_NAME = "WTI CPM-800 Control Port Manager"
     DEFAULT_CHANNEL_COUNT = 8
+    IP_SUFFIX = ".44"
 
-    @classmethod
-    def probe(cls, ip: str, port: int) -> bool:
-        return ip.endswith('.44')
+class WtiCpm1600Driver(BaseWtiPduDriver):
+    MODEL_NAME = "WTI CPM-1600 Control Port Manager"
+    DEFAULT_CHANNEL_COUNT = 16
+    IP_SUFFIX = ".418"
 
 
-# Register all 5 WTI models
-registry.register('pdu', 'wti_vmr_hd4d20', WtiVmrHd4d20Driver)
-registry.register('pdu', 'wti_vmr_16hd20', WtiVmr16Hd20Driver)
-registry.register('pdu', 'wti_nps_8hd20', WtiNps8Hd20Driver)
-registry.register('pdu', 'wti_ips_800', WtiIps800Driver)
-registry.register('pdu', 'wti_cpm_800', WtiCpm800Driver)
+# ==========================================
+# WTI Specialty Series (PTS / TSM / RSM / NBB)
+# ==========================================
+
+class WtiPts4Hd20Driver(BaseWtiPduDriver):
+    MODEL_NAME = "WTI PTS-4HD20 Power Transfer Switch"
+    DEFAULT_CHANNEL_COUNT = 4
+    IP_SUFFIX = ".440"
+
+class WtiTsm8Driver(BaseWtiPduDriver):
+    MODEL_NAME = "WTI TSM-8 Terminal Server Manager"
+    DEFAULT_CHANNEL_COUNT = 8
+    IP_SUFFIX = ".448"
+
+class WtiRsm8Driver(BaseWtiPduDriver):
+    MODEL_NAME = "WTI RSM-8 Remote Site Manager"
+    DEFAULT_CHANNEL_COUNT = 8
+    IP_SUFFIX = ".449"
+
+class WtiNbb16Driver(BaseWtiPduDriver):
+    MODEL_NAME = "WTI NBB-16 Network Boot Bar"
+    DEFAULT_CHANNEL_COUNT = 16
+    IP_SUFFIX = ".460"
+
+
+# Registry mapping for all 16 WTI models
+WTI_MODELS = {
+    'wti_vmr_hd4d20': WtiVmrHd4d20Driver,
+    'wti_vmr_8hd20': WtiVmr8Hd20Driver,
+    'wti_vmr_16hd20': WtiVmr16Hd20Driver,
+    'wti_vmr_24hd20': WtiVmr24Hd20Driver,
+    'wti_nps_8hd20': WtiNps8Hd20Driver,
+    'wti_nps_16hd20': WtiNps16Hd20Driver,
+    'wti_nps_24hd20': WtiNps24Hd20Driver,
+    'wti_ips_400': WtiIps400Driver,
+    'wti_ips_800': WtiIps800Driver,
+    'wti_ips_1600': WtiIps1600Driver,
+    'wti_cpm_800': WtiCpm800Driver,
+    'wti_cpm_1600': WtiCpm1600Driver,
+    'wti_pts_4hd20': WtiPts4Hd20Driver,
+    'wti_tsm_8': WtiTsm8Driver,
+    'wti_rsm_8': WtiRsm8Driver,
+    'wti_nbb_16': WtiNbb16Driver,
+}
+
+for sig, driver_cls in WTI_MODELS.items():
+    registry.register('pdu', sig, driver_cls)

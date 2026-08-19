@@ -11,12 +11,13 @@ logger = logging.getLogger(__name__)
 
 class BaseApcPduDriver(PDUDriver):
     """
-    Base driver for APC Switched Rack PDUs (AP79xx / AP89xx series).
+    Base driver for APC Switched Rack PDUs (AP79xx / AP89xx / AP86xx series).
     Supports HTTP/REST interaction with APC Network Management Cards.
     """
     MODEL_NAME = "APC Switched Rack PDU"
     DEFAULT_CHANNEL_COUNT = 8
     DEFAULT_PORT = 80
+    IP_SUFFIX = ""
 
     def __init__(self):
         self.ip = ""
@@ -28,6 +29,12 @@ class BaseApcPduDriver(PDUDriver):
         self.auth = HTTPBasicAuth(self.username, self.password)
         self.session = requests.Session()
         self.timeout = 5
+
+    @classmethod
+    def probe(cls, ip: str, port: int) -> bool:
+        if cls.IP_SUFFIX:
+            return ip.endswith(cls.IP_SUFFIX)
+        return False
 
     def connect(self, ip: str, port: int, username: Optional[str] = None, password: Optional[str] = None) -> bool:
         self.ip = ip
@@ -106,59 +113,144 @@ class BaseApcPduDriver(PDUDriver):
             raise Exception(f"APC Outlet Status API Error: {e}")
 
 
-# 1. APC AP7900 (1U, 120V 15A, 8 Outlets)
+# ==========================================
+# APC AP79xx Series (1st Gen Switched Rack PDUs)
+# ==========================================
+
 class ApcAp7900Driver(BaseApcPduDriver):
     MODEL_NAME = "APC AP7900 Switched Rack PDU"
     DEFAULT_CHANNEL_COUNT = 8
+    IP_SUFFIX = ".50"
 
-    @classmethod
-    def probe(cls, ip: str, port: int) -> bool:
-        return ip.endswith('.50')
+class ApcAp7901Driver(BaseApcPduDriver):
+    MODEL_NAME = "APC AP7901 Switched Rack PDU"
+    DEFAULT_CHANNEL_COUNT = 8
+    IP_SUFFIX = ".501"
 
+class ApcAp7902Driver(BaseApcPduDriver):
+    MODEL_NAME = "APC AP7902 Switched Rack PDU"
+    DEFAULT_CHANNEL_COUNT = 16
+    IP_SUFFIX = ".502"
 
-# 2. APC AP7920 (1U, 208/230V 12A, 8 Outlets)
+class ApcAp7911Driver(BaseApcPduDriver):
+    MODEL_NAME = "APC AP7911 Switched Rack PDU"
+    DEFAULT_CHANNEL_COUNT = 16
+    IP_SUFFIX = ".511"
+
 class ApcAp7920Driver(BaseApcPduDriver):
     MODEL_NAME = "APC AP7920 Switched Rack PDU"
     DEFAULT_CHANNEL_COUNT = 8
+    IP_SUFFIX = ".51"
 
-    @classmethod
-    def probe(cls, ip: str, port: int) -> bool:
-        return ip.endswith('.51')
-
-
-# 3. APC AP7921 (1U, 208/230V 16A, 8 Outlets)
 class ApcAp7921Driver(BaseApcPduDriver):
     MODEL_NAME = "APC AP7921 Switched Rack PDU"
     DEFAULT_CHANNEL_COUNT = 8
+    IP_SUFFIX = ".52"
 
-    @classmethod
-    def probe(cls, ip: str, port: int) -> bool:
-        return ip.endswith('.52')
+class ApcAp7922Driver(BaseApcPduDriver):
+    MODEL_NAME = "APC AP7922 Switched Rack PDU"
+    DEFAULT_CHANNEL_COUNT = 16
+    IP_SUFFIX = ".522"
+
+class ApcAp7930Driver(BaseApcPduDriver):
+    MODEL_NAME = "APC AP7930 Switched Rack PDU"
+    DEFAULT_CHANNEL_COUNT = 24
+    IP_SUFFIX = ".530"
+
+class ApcAp7931Driver(BaseApcPduDriver):
+    MODEL_NAME = "APC AP7931 Switched Rack PDU"
+    DEFAULT_CHANNEL_COUNT = 24
+    IP_SUFFIX = ".531"
+
+class ApcAp7932Driver(BaseApcPduDriver):
+    MODEL_NAME = "APC AP7932 Switched Rack PDU"
+    DEFAULT_CHANNEL_COUNT = 24
+    IP_SUFFIX = ".532"
 
 
-# 4. APC AP8941 (2U 200/208V 30A, 24 Outlets)
+# ==========================================
+# APC AP89xx Series (2nd Gen Switched Rack PDUs)
+# ==========================================
+
+class ApcAp8930Driver(BaseApcPduDriver):
+    MODEL_NAME = "APC AP8930 Switched Rack PDU 2G"
+    DEFAULT_CHANNEL_COUNT = 24
+    IP_SUFFIX = ".590"
+
+class ApcAp8932Driver(BaseApcPduDriver):
+    MODEL_NAME = "APC AP8932 Switched Rack PDU 2G"
+    DEFAULT_CHANNEL_COUNT = 24
+    IP_SUFFIX = ".592"
+
 class ApcAp8941Driver(BaseApcPduDriver):
     MODEL_NAME = "APC AP8941 Switched Rack PDU 2G"
     DEFAULT_CHANNEL_COUNT = 24
+    IP_SUFFIX = ".53"
 
-    @classmethod
-    def probe(cls, ip: str, port: int) -> bool:
-        return ip.endswith('.53')
+class ApcAp8953Driver(BaseApcPduDriver):
+    MODEL_NAME = "APC AP8953 Switched Rack PDU 2G"
+    DEFAULT_CHANNEL_COUNT = 24
+    IP_SUFFIX = ".553"
 
+class ApcAp8958Driver(BaseApcPduDriver):
+    MODEL_NAME = "APC AP8958 Switched Rack PDU 2G"
+    DEFAULT_CHANNEL_COUNT = 20
+    IP_SUFFIX = ".558"
 
-# 5. APC AP8959 (0U 200-240V 24xC13 + 4xC19, 28 Outlets)
 class ApcAp8959Driver(BaseApcPduDriver):
     MODEL_NAME = "APC AP8959 Switched Rack PDU 2G"
     DEFAULT_CHANNEL_COUNT = 28
+    IP_SUFFIX = ".54"
 
-    @classmethod
-    def probe(cls, ip: str, port: int) -> bool:
-        return ip.endswith('.54')
+class ApcAp8959Eu3Driver(BaseApcPduDriver):
+    MODEL_NAME = "APC AP8959EU3 3-Phase Switched Rack PDU 2G"
+    DEFAULT_CHANNEL_COUNT = 24
+    IP_SUFFIX = ".559"
+
+class ApcAp8965Driver(BaseApcPduDriver):
+    MODEL_NAME = "APC AP8965 3-Phase Switched Rack PDU 2G"
+    DEFAULT_CHANNEL_COUNT = 24
+    IP_SUFFIX = ".565"
 
 
-# Register all 5 APC drivers
-registry.register('pdu', 'apc_ap7900', ApcAp7900Driver)
-registry.register('pdu', 'apc_ap7920', ApcAp7920Driver)
-registry.register('pdu', 'apc_ap7921', ApcAp7921Driver)
-registry.register('pdu', 'apc_ap8941', ApcAp8941Driver)
-registry.register('pdu', 'apc_ap8959', ApcAp8959Driver)
+# ==========================================
+# APC AP86xx Series (Metered-by-Outlet with Switching)
+# ==========================================
+
+class ApcAp8641Driver(BaseApcPduDriver):
+    MODEL_NAME = "APC AP8641 Switched Rack PDU with Outlet Metering"
+    DEFAULT_CHANNEL_COUNT = 24
+    IP_SUFFIX = ".564"
+
+class ApcAp8659Driver(BaseApcPduDriver):
+    MODEL_NAME = "APC AP8659 Switched Rack PDU with Outlet Metering"
+    DEFAULT_CHANNEL_COUNT = 28
+    IP_SUFFIX = ".569"
+
+
+# Registry mapping for all 20 APC models
+APC_MODELS = {
+    'apc_ap7900': ApcAp7900Driver,
+    'apc_ap7901': ApcAp7901Driver,
+    'apc_ap7902': ApcAp7902Driver,
+    'apc_ap7911': ApcAp7911Driver,
+    'apc_ap7920': ApcAp7920Driver,
+    'apc_ap7921': ApcAp7921Driver,
+    'apc_ap7922': ApcAp7922Driver,
+    'apc_ap7930': ApcAp7930Driver,
+    'apc_ap7931': ApcAp7931Driver,
+    'apc_ap7932': ApcAp7932Driver,
+    'apc_ap8930': ApcAp8930Driver,
+    'apc_ap8932': ApcAp8932Driver,
+    'apc_ap8941': ApcAp8941Driver,
+    'apc_ap8953': ApcAp8953Driver,
+    'apc_ap8958': ApcAp8958Driver,
+    'apc_ap8959': ApcAp8959Driver,
+    'apc_ap8959eu3': ApcAp8959Eu3Driver,
+    'apc_ap8965': ApcAp8965Driver,
+    'apc_ap8641': ApcAp8641Driver,
+    'apc_ap8659': ApcAp8659Driver,
+}
+
+for sig, driver_cls in APC_MODELS.items():
+    registry.register('pdu', sig, driver_cls)

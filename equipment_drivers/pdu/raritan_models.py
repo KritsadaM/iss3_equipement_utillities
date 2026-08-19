@@ -17,6 +17,7 @@ class BaseRaritanPduDriver(PDUDriver):
     MODEL_NAME = "Raritan Intelligent Rack PDU"
     DEFAULT_CHANNEL_COUNT = 8
     DEFAULT_PORT = 80
+    IP_SUFFIX = ""
 
     def __init__(self):
         self.ip = ""
@@ -28,6 +29,12 @@ class BaseRaritanPduDriver(PDUDriver):
         self.auth = HTTPDigestAuth(self.username, self.password)
         self.session = requests.Session()
         self.timeout = 5
+
+    @classmethod
+    def probe(cls, ip: str, port: int) -> bool:
+        if cls.IP_SUFFIX:
+            return ip.endswith(cls.IP_SUFFIX)
+        return False
 
     def connect(self, ip: str, port: int, username: Optional[str] = None, password: Optional[str] = None) -> bool:
         self.ip = ip
@@ -42,7 +49,6 @@ class BaseRaritanPduDriver(PDUDriver):
 
         try:
             response = self.session.get(f"{self.base_url}/model/pdu/0", auth=self.auth, timeout=self.timeout)
-            # Try basic auth if digest auth fails (some firmware versions support basic auth)
             if response.status_code == 401:
                 self.auth = HTTPBasicAuth(self.username, self.password)
                 response = self.session.get(f"{self.base_url}/model/pdu/0", auth=self.auth, timeout=self.timeout)
@@ -67,10 +73,6 @@ class BaseRaritanPduDriver(PDUDriver):
         return self.DEFAULT_CHANNEL_COUNT
 
     def _control_outlet(self, channel: int, power_state: int) -> Tuple[bool, str]:
-        """
-        power_state: 1 for ON (close), 0 for OFF (open)
-        Raritan uses 0-indexed outlet internal mapping (channel 1 -> outlet 0).
-        """
         if not self.connected:
             raise Exception("Not connected to PDU")
         self.validate_channel(channel)
@@ -117,59 +119,150 @@ class BaseRaritanPduDriver(PDUDriver):
             raise Exception(f"Raritan Outlet Status API Error: {e}")
 
 
-# 1. Raritan PX2-5190R (1U/2U Switched, 8 Outlets)
+# ==========================================
+# Raritan PX2 Series
+# ==========================================
+
 class RaritanPx25190RDriver(BaseRaritanPduDriver):
     MODEL_NAME = "Raritan PX2-5190R Switched PDU"
     DEFAULT_CHANNEL_COUNT = 8
+    IP_SUFFIX = ".60"
 
-    @classmethod
-    def probe(cls, ip: str, port: int) -> bool:
-        return ip.endswith('.60')
+class RaritanPx25200RDriver(BaseRaritanPduDriver):
+    MODEL_NAME = "Raritan PX2-5200R Switched PDU"
+    DEFAULT_CHANNEL_COUNT = 8
+    IP_SUFFIX = ".602"
 
+class RaritanPx25440Driver(BaseRaritanPduDriver):
+    MODEL_NAME = "Raritan PX2-5440 Switched PDU"
+    DEFAULT_CHANNEL_COUNT = 20
+    IP_SUFFIX = ".644"
 
-# 2. Raritan PX3-5460 (0U Switched & Metered, 30 Outlets)
-class RaritanPx35460Driver(BaseRaritanPduDriver):
-    MODEL_NAME = "Raritan PX3-5460 Switched PDU"
+class RaritanPx25460Driver(BaseRaritanPduDriver):
+    MODEL_NAME = "Raritan PX2-5460 Switched PDU"
     DEFAULT_CHANNEL_COUNT = 30
+    IP_SUFFIX = ".61"
 
-    @classmethod
-    def probe(cls, ip: str, port: int) -> bool:
-        return ip.endswith('.61')
-
-
-# 3. Raritan PX3-5493 (0U Switched, 24 Outlets)
-class RaritanPx35493Driver(BaseRaritanPduDriver):
-    MODEL_NAME = "Raritan PX3-5493 Switched PDU"
+class RaritanPx25493Driver(BaseRaritanPduDriver):
+    MODEL_NAME = "Raritan PX2-5493 Switched PDU"
     DEFAULT_CHANNEL_COUNT = 24
+    IP_SUFFIX = ".649"
 
-    @classmethod
-    def probe(cls, ip: str, port: int) -> bool:
-        return ip.endswith('.62')
+class RaritanPx25524Driver(BaseRaritanPduDriver):
+    MODEL_NAME = "Raritan PX2-5524 Switched PDU"
+    DEFAULT_CHANNEL_COUNT = 24
+    IP_SUFFIX = ".652"
 
+class RaritanPx25804Driver(BaseRaritanPduDriver):
+    MODEL_NAME = "Raritan PX2-5804 Switched PDU"
+    DEFAULT_CHANNEL_COUNT = 42
+    IP_SUFFIX = ".680"
 
-# 4. Raritan PX2-1493 (0U Switched, 24 Outlets)
 class RaritanPx21493Driver(BaseRaritanPduDriver):
     MODEL_NAME = "Raritan PX2-1493 Switched PDU"
     DEFAULT_CHANNEL_COUNT = 24
-
-    @classmethod
-    def probe(cls, ip: str, port: int) -> bool:
-        return ip.endswith('.63')
+    IP_SUFFIX = ".63"
 
 
-# 5. Raritan DPXR8A-16 (Dominion PX 8-Port Switched, 8 Outlets)
+# ==========================================
+# Raritan PX3 Series (Next-Gen Intelligent PDUs)
+# ==========================================
+
+class RaritanPx35190RDriver(BaseRaritanPduDriver):
+    MODEL_NAME = "Raritan PX3-5190R Switched PDU"
+    DEFAULT_CHANNEL_COUNT = 8
+    IP_SUFFIX = ".619"
+
+class RaritanPx35200RDriver(BaseRaritanPduDriver):
+    MODEL_NAME = "Raritan PX3-5200R Switched PDU"
+    DEFAULT_CHANNEL_COUNT = 8
+    IP_SUFFIX = ".620"
+
+class RaritanPx35440Driver(BaseRaritanPduDriver):
+    MODEL_NAME = "Raritan PX3-5440 Switched PDU"
+    DEFAULT_CHANNEL_COUNT = 20
+    IP_SUFFIX = ".640"
+
+class RaritanPx35460Driver(BaseRaritanPduDriver):
+    MODEL_NAME = "Raritan PX3-5460 Switched PDU"
+    DEFAULT_CHANNEL_COUNT = 30
+    IP_SUFFIX = ".61"
+
+class RaritanPx35493Driver(BaseRaritanPduDriver):
+    MODEL_NAME = "Raritan PX3-5493 Switched PDU"
+    DEFAULT_CHANNEL_COUNT = 24
+    IP_SUFFIX = ".62"
+
+class RaritanPx35524Driver(BaseRaritanPduDriver):
+    MODEL_NAME = "Raritan PX3-5524 Switched PDU"
+    DEFAULT_CHANNEL_COUNT = 24
+    IP_SUFFIX = ".624"
+
+class RaritanPx35724Driver(BaseRaritanPduDriver):
+    MODEL_NAME = "Raritan PX3-5724 Switched PDU"
+    DEFAULT_CHANNEL_COUNT = 36
+    IP_SUFFIX = ".672"
+
+class RaritanPx35804Driver(BaseRaritanPduDriver):
+    MODEL_NAME = "Raritan PX3-5804 Switched PDU"
+    DEFAULT_CHANNEL_COUNT = 42
+    IP_SUFFIX = ".684"
+
+class RaritanPx35904Driver(BaseRaritanPduDriver):
+    MODEL_NAME = "Raritan PX3-5904 Switched PDU"
+    DEFAULT_CHANNEL_COUNT = 54
+    IP_SUFFIX = ".694"
+
+
+# ==========================================
+# Raritan Dominion PX Series
+# ==========================================
+
 class RaritanDpxr8a16Driver(BaseRaritanPduDriver):
     MODEL_NAME = "Raritan Dominion PX DPXR8A-16"
     DEFAULT_CHANNEL_COUNT = 8
+    IP_SUFFIX = ".64"
 
-    @classmethod
-    def probe(cls, ip: str, port: int) -> bool:
-        return ip.endswith('.64')
+class RaritanDpxr12a16Driver(BaseRaritanPduDriver):
+    MODEL_NAME = "Raritan Dominion PX DPXR12A-16"
+    DEFAULT_CHANNEL_COUNT = 12
+    IP_SUFFIX = ".612"
+
+class RaritanDpxr20a16Driver(BaseRaritanPduDriver):
+    MODEL_NAME = "Raritan Dominion PX DPXR20A-16"
+    DEFAULT_CHANNEL_COUNT = 20
+    IP_SUFFIX = ".616"
+
+class RaritanDpxr20a30Driver(BaseRaritanPduDriver):
+    MODEL_NAME = "Raritan Dominion PX DPXR20A-30"
+    DEFAULT_CHANNEL_COUNT = 20
+    IP_SUFFIX = ".630"
 
 
-# Register all 5 Raritan drivers
-registry.register('pdu', 'raritan_px2_5190r', RaritanPx25190RDriver)
-registry.register('pdu', 'raritan_px3_5460', RaritanPx35460Driver)
-registry.register('pdu', 'raritan_px3_5493', RaritanPx35493Driver)
-registry.register('pdu', 'raritan_px2_1493', RaritanPx21493Driver)
-registry.register('pdu', 'raritan_dpxr8a_16', RaritanDpxr8a16Driver)
+# Registry mapping for all 21 Raritan models
+RARITAN_MODELS = {
+    'raritan_px2_5190r': RaritanPx25190RDriver,
+    'raritan_px2_5200r': RaritanPx25200RDriver,
+    'raritan_px2_5440': RaritanPx25440Driver,
+    'raritan_px2_5460': RaritanPx25460Driver,
+    'raritan_px2_5493': RaritanPx25493Driver,
+    'raritan_px2_5524': RaritanPx25524Driver,
+    'raritan_px2_5804': RaritanPx25804Driver,
+    'raritan_px2_1493': RaritanPx21493Driver,
+    'raritan_px3_5190r': RaritanPx35190RDriver,
+    'raritan_px3_5200r': RaritanPx35200RDriver,
+    'raritan_px3_5440': RaritanPx35440Driver,
+    'raritan_px3_5460': RaritanPx35460Driver,
+    'raritan_px3_5493': RaritanPx35493Driver,
+    'raritan_px3_5524': RaritanPx35524Driver,
+    'raritan_px3_5724': RaritanPx35724Driver,
+    'raritan_px3_5804': RaritanPx35804Driver,
+    'raritan_px3_5904': RaritanPx35904Driver,
+    'raritan_dpxr8a_16': RaritanDpxr8a16Driver,
+    'raritan_dpxr12a_16': RaritanDpxr12a16Driver,
+    'raritan_dpxr20a_16': RaritanDpxr20a16Driver,
+    'raritan_dpxr20a_30': RaritanDpxr20a30Driver,
+}
+
+for sig, driver_cls in RARITAN_MODELS.items():
+    registry.register('pdu', sig, driver_cls)
