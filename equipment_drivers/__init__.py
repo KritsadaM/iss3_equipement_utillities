@@ -2,7 +2,7 @@
 Importing this package triggers auto-discovery of all driver modules under
 pdu/, terminal_server/, and daq/. Each driver module is expected to register
 itself against the global registry via the @registry.register(...) decorator
-at import time (see registry.py and pdu/wti_vmr_hd4d20.py for the pattern).
+at import time (see registry.py and pdu/wti_models.py for the pattern).
 
 This means adding a new driver is just: drop a new .py file in the right
 subfolder with a @registry.register(...)-decorated class. No edits needed

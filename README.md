@@ -66,7 +66,9 @@ equipment_drivers/
 ├── responses.py          # PDUResponse: structured result of a PDU action
 ├── pdu/
 │   ├── dummy_pdu.py
-│   └── wti_vmr_hd4d20.py
+│   ├── apc_models.py
+│   ├── wti_models.py
+│   └── raritan_models.py
 ├── terminal_server/
 │   └── dummy_ts.py
 └── daq/
@@ -82,7 +84,7 @@ equipment_drivers/
 `PDUDriver.turn_on` / `turn_off` / `get_status` return a `PDUResponse` dataclass rather than a bare tuple, so other Python code that imports a driver directly gets full detail:
 
 ```python
-from equipment_drivers.pdu.wti_vmr_hd4d20 import WtiVmrHd4d20Driver
+from equipment_drivers.pdu.wti_models import WtiVmrHd4d20Driver
 
 driver = WtiVmrHd4d20Driver()
 driver.connect("192.168.1.40", 80)

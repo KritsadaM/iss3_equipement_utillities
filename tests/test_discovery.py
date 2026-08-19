@@ -2,7 +2,7 @@ import unittest
 import equipment_drivers
 from equipment_drivers.discovery import discover_and_instantiate
 from equipment_drivers.pdu.dummy_pdu import DummyPDUDriver
-from equipment_drivers.pdu.wti_vmr_hd4d20 import WtiVmrHd4d20Driver
+from equipment_drivers.pdu.wti_models import WtiVmrHd4d20Driver
 
 class TestDiscovery(unittest.TestCase):
     def test_discover_dummy_pdu(self):

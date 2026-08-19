@@ -122,6 +122,16 @@ class BaseWtiPduDriver(PDUDriver):
             raise Exception(f"WTI Plug Status API Error: {e}")
 
 
+# 1. WTI VMR-HD4D20 C19 (High Density 20 Outlets)
+class WtiVmrHd4d20Driver(BaseWtiPduDriver):
+    MODEL_NAME = "WTI VMR-HD4D20 C19"
+    DEFAULT_CHANNEL_COUNT = 20
+
+    @classmethod
+    def probe(cls, ip: str, port: int) -> bool:
+        return ip.endswith('.40')
+
+
 # 2. WTI VMR-16HD20 (High Density 16 Outlets)
 class WtiVmr16Hd20Driver(BaseWtiPduDriver):
     MODEL_NAME = "WTI VMR-16HD20 Switched PDU"
@@ -162,7 +172,8 @@ class WtiCpm800Driver(BaseWtiPduDriver):
         return ip.endswith('.44')
 
 
-# Register the WTI models
+# Register all 5 WTI models
+registry.register('pdu', 'wti_vmr_hd4d20', WtiVmrHd4d20Driver)
 registry.register('pdu', 'wti_vmr_16hd20', WtiVmr16Hd20Driver)
 registry.register('pdu', 'wti_nps_8hd20', WtiNps8Hd20Driver)
 registry.register('pdu', 'wti_ips_800', WtiIps800Driver)
