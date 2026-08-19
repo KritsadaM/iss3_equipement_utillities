@@ -44,7 +44,8 @@ class TestWtiVmrHd4d20Driver(unittest.TestCase):
         self.assertEqual(self.driver.password, "admin")
 
     @patch('equipment_drivers.pdu.wti_vmr_hd4d20.requests.Session.put')
-    def test_turn_on(self, mock_put):
+    @patch('equipment_drivers.pdu.wti_vmr_hd4d20.WtiVmrHd4d20Driver.get_channel_count', return_value=20)
+    def test_turn_on(self, mock_count, mock_put):
         self.driver.connected = True
         self.driver.base_url = f"http://{self.ip}:{self.port}/api/v2"
 
@@ -66,7 +67,8 @@ class TestWtiVmrHd4d20Driver(unittest.TestCase):
         )
 
     @patch('equipment_drivers.pdu.wti_vmr_hd4d20.requests.Session.get')
-    def test_get_status_on(self, mock_get):
+    @patch('equipment_drivers.pdu.wti_vmr_hd4d20.WtiVmrHd4d20Driver.get_channel_count', return_value=20)
+    def test_get_status_on(self, mock_count, mock_get):
         self.driver.connected = True
         self.driver.base_url = f"http://{self.ip}:{self.port}/api/v2"
 
@@ -104,6 +106,25 @@ class TestWtiVmrHd4d20Driver(unittest.TestCase):
         mock_get.side_effect = requests.exceptions.ConnectionError("unreachable")
 
         self.assertEqual(self.driver.get_channel_count(), WtiVmrHd4d20Driver.DEFAULT_CHANNEL_COUNT)
+
+    @patch('equipment_drivers.pdu.wti_vmr_hd4d20.WtiVmrHd4d20Driver.get_channel_count', return_value=20)
+    def test_out_of_range_channel_raises_value_error(self, mock_count):
+        self.driver.connected = True
+        self.driver.base_url = f"http://{self.ip}:{self.port}/api/v2"
+
+        with self.assertRaises(ValueError) as ctx:
+            self.driver.turn_on(0)
+        self.assertIn("out of range", str(ctx.exception))
+
+        with self.assertRaises(ValueError) as ctx:
+            self.driver.turn_off(21)
+        self.assertIn("out of range", str(ctx.exception))
+
+        with self.assertRaises(ValueError) as ctx:
+            self.driver.get_status(-1)
+        self.assertIn("out of range", str(ctx.exception))
+
+
 
 if __name__ == '__main__':
     unittest.main()

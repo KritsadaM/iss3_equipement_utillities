@@ -45,13 +45,16 @@ def main():
         model = driver.get_model()
         print(f"Detected Model: {model}")
 
-        # Only query the driver's channel count if 'all' was actually requested,
-        # to avoid an extra round-trip for the common single/list/range cases.
-        channel_count = driver.get_channel_count() if args.channel.strip().lower() == "all" else None
+        try:
+            channel_count = driver.get_max_channel()
+        except Exception as e:
+            logger.warning(f"Could not determine driver channel count: {e}")
+            channel_count = None
+
         try:
             channels = parse_channels(args.channel, channel_count=channel_count)
         except ValueError as e:
-            logger.error(f"Invalid channel spec '{args.channel}': {e}")
+            logger.error(f"Usage error: {e}")
             sys.exit(1)
 
         any_failed = False

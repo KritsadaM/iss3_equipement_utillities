@@ -107,6 +107,7 @@ class WtiVmrHd4d20Driver(PDUDriver):
         """
         if not self.connected:
             raise Exception("Not connected to PDU")
+        self.validate_channel(channel)
             
         url = f"{self.base_url}/plugs/{channel}"
         payload = {"action": action}
@@ -132,6 +133,7 @@ class WtiVmrHd4d20Driver(PDUDriver):
     def get_status(self, channel: int) -> PDUResponse:
         if not self.connected:
             raise Exception("Not connected to PDU")
+        self.validate_channel(channel)
             
         url = f"{self.base_url}/plugs/{channel}"
         
