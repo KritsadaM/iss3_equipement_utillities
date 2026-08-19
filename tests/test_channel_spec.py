@@ -46,6 +46,38 @@ class TestParseChannels(unittest.TestCase):
         with self.assertRaises(ValueError):
             parse_channels("")
 
+    def test_single_channel_with_channel_count_valid(self):
+        self.assertEqual(parse_channels("4", channel_count=8), [4])
+
+    def test_single_channel_out_of_range_raises(self):
+        with self.assertRaises(ValueError) as ctx:
+            parse_channels("9", channel_count=8)
+        self.assertIn("out of range", str(ctx.exception))
+
+    def test_range_out_of_range_raises(self):
+        with self.assertRaises(ValueError) as ctx:
+            parse_channels("3-10", channel_count=8)
+        self.assertIn("out of range", str(ctx.exception))
+
+    def test_comma_list_out_of_range_raises(self):
+        with self.assertRaises(ValueError) as ctx:
+            parse_channels("1,2,9", channel_count=8)
+        self.assertIn("out of range", str(ctx.exception))
+
+    def test_zero_channel_raises(self):
+        with self.assertRaises(ValueError) as ctx:
+            parse_channels("0")
+        self.assertIn(">= 1", str(ctx.exception))
+
+    def test_negative_channel_raises(self):
+        with self.assertRaises(ValueError):
+            parse_channels("-1")
+
+    def test_zero_in_range_raises(self):
+        with self.assertRaises(ValueError) as ctx:
+            parse_channels("0-4")
+        self.assertIn(">= 1", str(ctx.exception))
+
 
 if __name__ == '__main__':
     unittest.main()

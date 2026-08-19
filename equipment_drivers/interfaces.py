@@ -58,6 +58,26 @@ class PDUDriver(EquipmentDriver):
         """
         pass
 
+    def get_max_channel(self) -> int:
+        """
+        Returns the maximum valid channel number for this PDU (1..max_channel).
+        Defaults to get_channel_count().
+        """
+        return self.get_channel_count()
+
+    def validate_channel(self, channel: int) -> None:
+        """
+        Validates that the channel is within the allowed range [1, get_max_channel()].
+        Raises ValueError with a descriptive usage error message if out of range.
+        """
+        if not isinstance(channel, int):
+            raise ValueError(f"Channel must be an integer, got {type(channel).__name__}: {channel}")
+        max_ch = self.get_max_channel()
+        if channel < 1 or channel > max_ch:
+            raise ValueError(
+                f"Channel {channel} is out of range. Valid channels for {self.get_model()} are 1 to {max_ch}."
+            )
+
 class TerminalServerDriver(EquipmentDriver):
     @abstractmethod
     def get_status(self) -> Tuple[str, str]:

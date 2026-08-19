@@ -34,6 +34,7 @@ class DummyPDUDriver(PDUDriver):
     def turn_on(self, channel: int) -> PDUResponse:
         if not self.connected:
             raise Exception("Not connected to PDU")
+        self.validate_channel(channel)
         logger.info(f"Turning ON channel {channel} on Dummy PDU")
         raw_output = f"DUMMY_RAW: Channel {channel} set to 1"
         return PDUResponse(success=True, action="turn_on", channel=channel, raw=raw_output)
@@ -41,6 +42,7 @@ class DummyPDUDriver(PDUDriver):
     def turn_off(self, channel: int) -> PDUResponse:
         if not self.connected:
             raise Exception("Not connected to PDU")
+        self.validate_channel(channel)
         logger.info(f"Turning OFF channel {channel} on Dummy PDU")
         raw_output = f"DUMMY_RAW: Channel {channel} set to 0"
         return PDUResponse(success=True, action="turn_off", channel=channel, raw=raw_output)
@@ -48,6 +50,7 @@ class DummyPDUDriver(PDUDriver):
     def get_status(self, channel: int) -> PDUResponse:
         if not self.connected:
             raise Exception("Not connected to PDU")
+        self.validate_channel(channel)
         logger.info(f"Checking status for channel {channel} on Dummy PDU")
         raw_output = f"DUMMY_RAW: Channel {channel} is 1"
         return PDUResponse(success=True, action="get_status", channel=channel, raw=raw_output, status="ON")

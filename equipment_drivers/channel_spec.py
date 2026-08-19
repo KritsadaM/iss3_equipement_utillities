@@ -41,13 +41,22 @@ def parse_channels(spec: str, channel_count: Optional[int] = None) -> List[int]:
                 start, end = int(start_str), int(end_str)
             except ValueError:
                 raise ValueError(f"Invalid channel range: '{part}'")
+            if start < 1:
+                raise ValueError(f"Invalid channel range '{part}': channel numbers must be >= 1")
             if start > end:
                 raise ValueError(f"Invalid channel range (start > end): '{part}'")
+            if channel_count is not None and end > channel_count:
+                raise ValueError(f"Channel {end} in range '{part}' is out of range (maximum channel is {channel_count})")
             channels.update(range(start, end + 1))
         else:
             try:
-                channels.add(int(part))
+                ch = int(part)
             except ValueError:
                 raise ValueError(f"Invalid channel: '{part}'")
+            if ch < 1:
+                raise ValueError(f"Invalid channel {ch}: channel numbers must be >= 1")
+            if channel_count is not None and ch > channel_count:
+                raise ValueError(f"Channel {ch} is out of range (maximum channel is {channel_count})")
+            channels.add(ch)
 
     return sorted(channels)
