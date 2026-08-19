@@ -1,7 +1,7 @@
-PKG_NAME=iss-equipment-utilities
-VERSION=1.0
-ARCH=all
-BUILD_DIR=build/$(PKG_NAME)_$(VERSION)-1_$(ARCH)
+PKG_NAME ?= iss-equipment-utilities
+VERSION ?= 1.1
+ARCH ?= all
+BUILD_DIR = build/$(PKG_NAME)_$(VERSION)-1_$(ARCH)
 
 all: deb
 
@@ -42,6 +42,13 @@ deb-docker:
 	docker run --rm -v $$(pwd):/app -w /app ubuntu:latest bash -c "apt-get update && apt-get install -y make build-essential dpkg-dev && make deb"
 
 release: deb
-	@echo "Creating GitHub release for v$(VERSION)..."
+	@echo "Publishing GitHub release for v$(VERSION)..."
 	@if ! command -v gh > /dev/null 2>&1; then echo "Error: GitHub CLI (gh) is not installed."; exit 1; fi
-	gh release create v$(VERSION) *.deb --title "Release v$(VERSION)" --notes "Automated release of v$(VERSION)"
+	@if gh release view v$(VERSION) > /dev/null 2>&1; then \
+		echo "Release v$(VERSION) already exists on GitHub. Uploading and updating .deb asset..."; \
+		gh release upload --clobber v$(VERSION) *.deb; \
+	else \
+		echo "Creating new GitHub release v$(VERSION)..."; \
+		gh release create v$(VERSION) *.deb --title "Release v$(VERSION)" --notes "Automated release of v$(VERSION)"; \
+	fi
+
