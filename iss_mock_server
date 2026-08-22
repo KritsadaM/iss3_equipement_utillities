@@ -1,0 +1,121 @@
+#!/usr/bin/env python3
+"""
+iss_mock_server — Standalone ISS Equipment Mock HTTP Server
+Engineering Use ONLY. Not included in official production releases.
+
+Starts a persistent local HTTP server that simulates APC, WTI, or Raritan
+PDU REST APIs. Use this to develop against a real-looking endpoint without
+any physical hardware — with curl, scripts, or iss_pdu_utility.
+"""
+
+import argparse
+import signal
+import sys
+import time
+
+import equipment_drivers  # noqa: trigger auto-import of all drivers
+from equipment_drivers.simulator import MockPduServer
+
+BOLD = "\033[1m"
+CYAN = "\033[96m"
+GREEN = "\033[92m"
+YELLOW = "\033[93m"
+RESET = "\033[0m"
+
+SUPPORTED_VENDORS = ["apc", "wti", "raritan"]
+
+VENDOR_ENDPOINTS = {
+    "apc": [
+        ("GET",  "/rest/v1/device",                  "Device info / model"),
+        ("GET",  "/rest/v1/power/outlets/<ch>",      "Outlet status for channel <ch>"),
+        ("PUT",  "/rest/v1/power/outlets/<ch>",      'Set outlet state: {"state": "ON"} or {"state": "OFF"}'),
+    ],
+    "wti": [
+        ("GET",  "/api/v2/status",                   "Device info / model"),
+        ("GET",  "/api/v2/plugs",                    "All plug states"),
+        ("GET",  "/api/v2/plugs/<ch>",               "Plug status for channel <ch>"),
+        ("PUT",  "/api/v2/plugs/<ch>",               'Set plug state: {"action": 1} = ON, {"action": 0} = OFF'),
+    ],
+    "raritan": [
+        ("GET",  "/model/pdu/0",                     "Device info / model"),
+        ("GET",  "/model/outlet/<idx>",              "Outlet status (idx = channel - 1)"),
+        ("PUT",  "/model/outlet/<idx>",              'Set outlet: {"powerState": 1} = ON, {"powerState": 0} = OFF'),
+    ],
+}
+
+
+def print_banner(vendor: str, host: str, port: int, channels: int):
+    print(f"{BOLD}")
+    print("=" * 72)
+    print(f"  ISS Mock Equipment Server — {vendor.upper()} PDU Simulator")
+    print(f"  [ENGINEERING USE ONLY — Not included in official package]")
+    print("=" * 72)
+    print(f"{RESET}")
+    print(f"  {BOLD}Listening:{RESET}   http://{host}:{port}")
+    print(f"  {BOLD}Vendor:{RESET}      {vendor.upper()}")
+    print(f"  {BOLD}Channels:{RESET}    {channels}")
+    print()
+    print(f"  {BOLD}{CYAN}Available API Endpoints:{RESET}")
+    for method, endpoint, desc in VENDOR_ENDPOINTS.get(vendor, []):
+        print(f"    [{method:3s}] {endpoint:<42} {desc}")
+    print()
+    print(f"  {BOLD}Example curl commands:{RESET}")
+    if vendor == "apc":
+        print(f"    curl http://{host}:{port}/rest/v1/device")
+        print(f"    curl http://{host}:{port}/rest/v1/power/outlets/1")
+        print(f"    curl -X PUT -H 'Content-Type: application/json' \\")
+        print(f'         -d \'{{"state":"OFF"}}\' http://{host}:{port}/rest/v1/power/outlets/1')
+    elif vendor == "wti":
+        print(f"    curl http://{host}:{port}/api/v2/status")
+        print(f"    curl http://{host}:{port}/api/v2/plugs")
+        print(f"    curl -X PUT -H 'Content-Type: application/json' \\")
+        print(f'         -d \'{{"action":0}}\' http://{host}:{port}/api/v2/plugs/1')
+    elif vendor == "raritan":
+        print(f"    curl http://{host}:{port}/model/pdu/0")
+        print(f"    curl http://{host}:{port}/model/outlet/0    # outlet 0 = channel 1")
+        print(f"    curl -X PUT -H 'Content-Type: application/json' \\")
+        print(f'         -d \'{{"powerState":0}}\' http://{host}:{port}/model/outlet/0')
+
+    print()
+    print(f"  {YELLOW}Press Ctrl+C to stop the server.{RESET}")
+    print()
+
+
+def main():
+    parser = argparse.ArgumentParser(
+        description="ISS Equipment Mock HTTP Server [Engineering Use Only]")
+    parser.add_argument(
+        "--vendor", choices=SUPPORTED_VENDORS, required=True,
+        help="Vendor to simulate: apc, wti, or raritan")
+    parser.add_argument(
+        "--port", type=int, default=8080,
+        help="Port to listen on (default: 8080)")
+    parser.add_argument(
+        "--channels", type=int, default=None,
+        help="Number of simulated outlets/channels (default: vendor-specific default)")
+    args = parser.parse_args()
+
+    # Default channel counts per vendor
+    default_channels = {"apc": 8, "wti": 20, "raritan": 24}
+    channels = args.channels or default_channels.get(args.vendor, 8)
+
+    server = MockPduServer(vendor=args.vendor, channel_count=channels, port=args.port)
+
+    def shutdown(sig, frame):
+        print(f"\n{BOLD}Shutting down mock server...{RESET}")
+        server.stop()
+        sys.exit(0)
+
+    signal.signal(signal.SIGINT, shutdown)
+    signal.signal(signal.SIGTERM, shutdown)
+
+    server.start()
+    print_banner(args.vendor, server.host, server.port, channels)
+
+    # Keep alive until Ctrl+C
+    while True:
+        time.sleep(1)
+
+
+if __name__ == "__main__":
+    main()
