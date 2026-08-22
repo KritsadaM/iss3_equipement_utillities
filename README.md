@@ -4,11 +4,12 @@ Command-line utilities to discover and control ISS3 equipments — PDUs, termina
 
 ## Utilities
 
-| Utility                | Equipment type   | Actions                  |
-|-------------------------|------------------|---------------------------|
-| `iss_pdu_utility`        | PDU              | `on`, `off`, `status`      |
-| `iss_terminal_utility`   | Terminal Server  | status dump                |
-| `iss_daq_utility`        | DAQ              | `start`, `stop`, `status`  |
+| Utility                | Equipment type   | Actions                                      |
+|-------------------------|------------------|----------------------------------------------|
+| `iss_pdu_utility`        | PDU              | `on`, `off`, `status`                        |
+| `iss_terminal_utility`   | Terminal Server  | status dump                                  |
+| `iss_daq_utility`        | DAQ              | `start`, `stop`, `status`                    |
+| `iss_trial_utility`      | PDU Diagnostics  | Blackbox trial simulation & live diagnostics |
 
 ## Installation
 
@@ -40,6 +41,34 @@ iss_terminal_utility --ip_address 192.168.1.20 --port 22
 iss_daq_utility --ip_address 192.168.1.30 --port 502 start
 iss_daq_utility --ip_address 192.168.1.30 --port 502 stop
 iss_daq_utility --ip_address 192.168.1.30 --port 502 status
+```
+
+### Blackbox Trial & Diagnostic Tool
+
+Run manual or automated blackbox trials against any model (using local simulated mock environment or live hardware) and inspect raw device output:
+
+```bash
+# List all 57+ supported hardware models
+iss_trial_utility --list
+
+# Trial a specific model in simulated blackbox mode
+iss_trial_utility --model apc_ap7900
+iss_trial_utility --model wti_vmr_hd4d20
+iss_trial_utility --model raritan_px3_5460
+
+# Trial all models for a specific vendor
+iss_trial_utility --vendor apc
+iss_trial_utility --vendor wti
+iss_trial_utility --vendor raritan
+
+# Trial all models in the entire catalog
+iss_trial_utility --all
+
+# Trial against real/live hardware
+iss_trial_utility --ip_address 192.168.1.50 --port 80 --model apc_ap7900
+
+# Launch interactive trial menu
+iss_trial_utility --interactive
 ```
 
 ### Credentials
