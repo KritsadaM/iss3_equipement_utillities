@@ -6,10 +6,11 @@ Command-line utilities to discover and control ISS3 equipments — PDUs, termina
 
 | Utility                | Equipment type   | Actions                                      |
 |-------------------------|------------------|----------------------------------------------|
-| `iss_pdu_utility`        | PDU              | `on`, `off`, `status`                        |
+| `iss_pdu_utility`        | PDU              | `on`, `off`, `status` (live & `--mock` mode) |
+| `iss_trial_utility`      | PDU Diagnostics  | Blackbox trial simulation & raw response inspection |
+| `iss_mock_server`        | Equipment Server | Standalone local HTTP simulator for APC/WTI/Raritan |
 | `iss_terminal_utility`   | Terminal Server  | status dump                                  |
 | `iss_daq_utility`        | DAQ              | `start`, `stop`, `status`                    |
-| `iss_trial_utility`      | PDU Diagnostics  | Blackbox trial simulation & live diagnostics |
 
 ## Installation
 
@@ -24,51 +25,60 @@ Or build a `.deb` package (see [Packaging](#packaging) below) and install it on 
 ### PDU
 
 ```bash
+# Live hardware:
 iss_pdu_utility --ip_address 192.168.1.40 --port 80 on 3
 iss_pdu_utility --ip_address 192.168.1.40 --port 80 off 3
 iss_pdu_utility --ip_address 192.168.1.40 --port 80 status 3
+
+# Offline Mock Mode (zero hardware required):
+iss_pdu_utility --mock --model apc_ap7900 on 1
+iss_pdu_utility --mock --model wti_vmr_hd4d20 status 1-3
+iss_pdu_utility --mock --model raritan_px3_5460 off 5
 ```
 
-### Terminal Server
+### Blackbox Trial Tool (Offline Mock Testing)
 
-```bash
-iss_terminal_utility --ip_address 192.168.1.20 --port 22
-```
-
-### DAQ
-
-```bash
-iss_daq_utility --ip_address 192.168.1.30 --port 502 start
-iss_daq_utility --ip_address 192.168.1.30 --port 502 stop
-iss_daq_utility --ip_address 192.168.1.30 --port 502 status
-```
-
-### Blackbox Trial & Diagnostic Tool
-
-Run manual or automated blackbox trials against any model (using local simulated mock environment or live hardware) and inspect raw device output:
+Run manual or automated blackbox trials against any model to inspect raw JSON/text output and test driver logic without hardware:
 
 ```bash
 # List all 57+ supported hardware models
 iss_trial_utility --list
 
-# Trial a specific model in simulated blackbox mode
+# Run full 9-phase blackbox trial on a specific model
 iss_trial_utility --model apc_ap7900
 iss_trial_utility --model wti_vmr_hd4d20
 iss_trial_utility --model raritan_px3_5460
+
+# Test specific action on simulated hardware and see RAW_OUTPUT:
+iss_trial_utility --model apc_ap7900 --action on --channel 1
+iss_trial_utility --model apc_ap7900 --action status --channel 1-3
+iss_trial_utility --model wti_vmr_hd4d20 --action off --channel 2
 
 # Trial all models for a specific vendor
 iss_trial_utility --vendor apc
 iss_trial_utility --vendor wti
 iss_trial_utility --vendor raritan
 
-# Trial all models in the entire catalog
+# Trial all 57 models in the entire catalog
 iss_trial_utility --all
 
-# Trial against real/live hardware
-iss_trial_utility --ip_address 192.168.1.50 --port 80 --model apc_ap7900
+# Launch interactive menu
+iss_trial_utility
+```
 
-# Launch interactive trial menu
-iss_trial_utility --interactive
+### Standalone Mock Equipment Server
+
+Start a persistent simulated HTTP server for testing `curl` or external scripts:
+
+```bash
+# Run APC mock server on port 8080
+iss_mock_server --vendor apc --port 8080
+
+# Run WTI mock server on port 8080
+iss_mock_server --vendor wti --port 8080
+
+# Run Raritan mock server on port 8080
+iss_mock_server --vendor raritan --port 8080
 ```
 
 ### Credentials

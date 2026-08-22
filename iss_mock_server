@@ -1,0 +1,67 @@
+#!/usr/bin/env python3
+"""
+Standalone ISS Equipment Mock Server
+Spins up a local HTTP mock server simulating APC, WTI, or Raritan hardware APIs.
+"""
+import argparse
+import sys
+import time
+from http.server import HTTPServer
+from equipment_drivers.simulator import MockEquipmentHandler, BOLD, RESET, CYAN, GREEN, YELLOW
+
+
+def main():
+    parser = argparse.ArgumentParser(
+        description="ISS Equipment Standalone Mock Server",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog="""
+Examples:
+  # Start simulated APC PDU server on port 8080
+  ./iss_mock_server --vendor apc --port 8080
+
+  # Start simulated WTI PDU server on port 8080
+  ./iss_mock_server --vendor wti --port 8080
+
+  # Start simulated Raritan PDU server on port 8080
+  ./iss_mock_server --vendor raritan --port 8080
+        """
+    )
+    parser.add_argument("--vendor", type=str, choices=["apc", "wti", "raritan"], default="apc",
+                        help="Equipment vendor API to simulate (default: apc)")
+    parser.add_argument("--port", type=int, default=8080, help="Port to listen on (default: 8080)")
+    parser.add_argument("--channels", type=int, default=24, help="Number of outlets/channels to simulate (default: 24)")
+
+    args = parser.parse_args()
+
+    class CustomHandler(MockEquipmentHandler):
+        pass
+
+    CustomHandler.vendor = args.vendor
+    CustomHandler.channel_count = args.channels
+    CustomHandler.outlet_states = {ch: 1 for ch in range(1, args.channels + 1)}
+
+    server = HTTPServer(("0.0.0.0", args.port), CustomHandler)
+
+    print(f"""
+{CYAN}{BOLD}========================================================================
+  ISS Equipment Mock Server
+========================================================================{RESET}
+  Vendor Simulated: {YELLOW}{args.vendor.upper()}{RESET}
+  Outlets / Channels: {BOLD}{args.channels}{RESET}
+  Listening Address: {GREEN}http://127.0.0.1:{args.port}{RESET}
+
+  Ready for commands from iss_pdu_utility, curl, or custom scripts.
+  Press Ctrl+C to stop.
+------------------------------------------------------------------------
+""")
+
+    try:
+        server.serve_forever()
+    except KeyboardInterrupt:
+        print(f"\n{YELLOW}Stopping mock server...{RESET}")
+        server.server_close()
+        print("Server stopped.")
+
+
+if __name__ == "__main__":
+    main()

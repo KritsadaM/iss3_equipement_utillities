@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """
-ISS Equipment Trial & Blackbox Testing Tool
-Allows operators and developers to manually trial any equipment model,
-run blackbox simulated/live hardware tests, and inspect raw device responses.
+ISS Equipment Blackbox Trial & Diagnostic Tool
+Allows operators and developers to trial any equipment model offline using simulated
+mock hardware, inspect raw responses, test actions, and verify driver logic with ZERO real hardware.
 """
 import argparse
 import sys
@@ -14,6 +14,7 @@ from equipment_drivers.registry import registry
 from equipment_drivers.simulator import (
     MockPduServer,
     run_pdu_blackbox_trial,
+    run_pdu_mock_action,
     determine_vendor,
     BOLD,
     RESET,
@@ -27,8 +28,8 @@ from equipment_drivers.simulator import (
 def print_banner():
     print(f"""
 {CYAN}{BOLD}========================================================================
-  ISS Equipment Blackbox Trial & Diagnostic Tool
-  Interactive & Automated Hardware Model Verification
+  ISS Equipment Blackbox Trial & Diagnostic Tool (Mock Simulation Mode)
+  Test and inspect raw device responses without requiring real hardware
 ========================================================================{RESET}
 """)
 
@@ -68,14 +69,14 @@ def trial_vendor_models(vendor: str):
         print(f"{RED}No drivers found for vendor '{vendor}'{RESET}")
         return
 
-    print(f"\n{BOLD}Executing Blackbox Trials on ALL {len(matching)} {vendor.upper()} Models...{RESET}\n")
+    print(f"\n{BOLD}Executing Mock Blackbox Trials on ALL {len(matching)} {vendor.upper()} Models...{RESET}\n")
     passed_count = 0
     start_time = time.time()
     for sig, cls in matching:
         if run_pdu_blackbox_trial(sig, cls):
             passed_count += 1
     elapsed = time.time() - start_time
-    print(f"\n{BOLD}Summary: {passed_count}/{len(matching)} {vendor.upper()} models passed all blackbox checks in {elapsed:.2f}s.{RESET}\n")
+    print(f"\n{BOLD}Summary: {passed_count}/{len(matching)} {vendor.upper()} models passed all mock checks in {elapsed:.2f}s.{RESET}\n")
 
 
 def interactive_vendor_menu(vendor: str):
@@ -145,7 +146,7 @@ def interactive_mode():
 
 def run_all_trials():
     all_drivers = registry.get_all_drivers("pdu")
-    print(f"\n{BOLD}Executing Blackbox Trial on ALL {len(all_drivers)} PDU Models...{RESET}\n")
+    print(f"\n{BOLD}Executing Mock Blackbox Trial on ALL {len(all_drivers)} PDU Models...{RESET}\n")
     passed = 0
     start_time = time.time()
 
@@ -161,24 +162,41 @@ def run_all_trials():
 
 def main():
     parser = argparse.ArgumentParser(
-        description="ISS Equipment Blackbox Trial & Testing Tool",
+        description="ISS Equipment Blackbox Trial & Testing Tool (Mock Simulation Mode)",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
+  # View all supported model signatures
   ./iss_trial_utility --list
+
+  # Run full 9-step mock blackbox trial on a specific model
   ./iss_trial_utility --model apc_ap7900
   ./iss_trial_utility --model wti_vmr_hd4d20
+  ./iss_trial_utility --model raritan_px3_5460
+
+  # Execute specific mock action and inspect raw response
+  ./iss_trial_utility --model apc_ap7900 --action on --channel 1
+  ./iss_trial_utility --model apc_ap7900 --action status --channel 1-3
+  ./iss_trial_utility --model wti_vmr_hd4d20 --action off --channel 2
+
+  # Run trials on all models of a vendor
   ./iss_trial_utility --vendor apc
+  ./iss_trial_utility --vendor wti
+  ./iss_trial_utility --vendor raritan
+
+  # Run trials on all models
   ./iss_trial_utility --all
-  ./iss_trial_utility --ip_address 192.168.1.50 --port 80 --model apc_ap7900
         """
     )
     parser.add_argument("--list", action="store_true", help="List all registered hardware models and exit")
     parser.add_argument("--model", type=str, default=None, help="Signature of the model to trial (e.g. apc_ap7900, wti_vmr_hd4d20, raritan_px3_5460)")
+    parser.add_argument("--action", type=str, choices=["trial", "on", "off", "status"], default="trial",
+                        help="Action to execute: 'trial' (full 9-phase trial), 'on', 'off', or 'status' (default: trial)")
+    parser.add_argument("--channel", type=str, default="1", help="Channel specification for action test (default: '1', supports '1,2' or '1-3')")
     parser.add_argument("--vendor", type=str, choices=["apc", "wti", "raritan", "dummy"], help="Run trials on all models of a specific vendor")
-    parser.add_argument("--all", action="store_true", help="Run blackbox trial across all registered models")
-    parser.add_argument("--ip_address", type=str, default=None, help="IP address of real/live hardware target (optional)")
-    parser.add_argument("--port", type=int, default=None, help="Port of real/live hardware target (optional)")
+    parser.add_argument("--all", action="store_true", help="Run mock blackbox trial across all registered models")
+    parser.add_argument("--ip_address", type=str, default=None, help="Ignored in mock mode (kept for CLI argument compatibility)")
+    parser.add_argument("--port", type=int, default=None, help="Ignored in mock mode (kept for CLI argument compatibility)")
     parser.add_argument("--interactive", action="store_true", help="Launch interactive model trial menu")
 
     args = parser.parse_args()
@@ -205,7 +223,11 @@ Examples:
             print(f"{RED}Error: Model signature '{args.model}' not found in registry.{RESET}")
             print("Use --list to view all available model signatures.")
             sys.exit(1)
-        success = run_pdu_blackbox_trial(args.model, driver_cls, live_ip=args.ip_address, live_port=args.port)
+
+        if args.action == "trial":
+            success = run_pdu_blackbox_trial(args.model, driver_cls)
+        else:
+            success = run_pdu_mock_action(args.model, driver_cls, action=args.action, channel_spec=args.channel)
         sys.exit(0 if success else 1)
 
     # If no arguments given or --interactive flag specified, launch interactive mode
