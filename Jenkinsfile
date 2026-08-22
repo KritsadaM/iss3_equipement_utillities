@@ -26,10 +26,10 @@ pipeline {
             }
         }
 
-        stage('Build & GitHub Release') {
+        stage('Build & GitHub Release (Both Packages)') {
             steps {
-                // This will run `make deb` and then use `gh release create`
-                // to upload the .deb file to GitHub automatically
+                // This runs `make release` which now builds both
+                // the official and engineering .deb packages and uploads them
                 sh 'make release'
             }
         }

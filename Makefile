@@ -118,16 +118,20 @@ deb-engineering-docker:
 		bash -c "apt-get update && apt-get install -y make build-essential dpkg-dev && make deb-engineering"
 
 # ==========================================================================
-# GitHub Release (official .deb only)
+# GitHub Release (Official and Engineering .deb)
 # ==========================================================================
-release: deb
+release: deb deb-engineering
 	@echo "Publishing GitHub release for v$(VERSION)..."
 	@if ! command -v gh > /dev/null 2>&1; then echo "Error: GitHub CLI (gh) is not installed."; exit 1; fi
 	@if gh release view v$(VERSION) > /dev/null 2>&1; then \
-		echo "Release v$(VERSION) already exists. Uploading and updating .deb asset..."; \
-		gh release upload --clobber v$(VERSION) $(PKG_NAME)_$(VERSION)-1_$(ARCH).deb; \
+		echo "Release v$(VERSION) already exists. Uploading and updating .deb assets..."; \
+		gh release upload --clobber v$(VERSION) \
+			$(PKG_NAME)_$(VERSION)-1_$(ARCH).deb \
+			$(PKG_ENG_NAME)_$(VERSION)-1_$(ARCH).deb; \
 	else \
 		echo "Creating new GitHub release v$(VERSION)..."; \
-		gh release create v$(VERSION) $(PKG_NAME)_$(VERSION)-1_$(ARCH).deb \
-			--title "Release v$(VERSION)" --notes "Automated release of v$(VERSION)"; \
+		gh release create v$(VERSION) \
+			$(PKG_NAME)_$(VERSION)-1_$(ARCH).deb \
+			$(PKG_ENG_NAME)_$(VERSION)-1_$(ARCH).deb \
+			--title "Release v$(VERSION)" --notes "Automated release of v$(VERSION) (Official & Engineering)"; \
 	fi
