@@ -34,7 +34,7 @@ HEADER = f"""{BOLD}
 def list_all_models():
     print(HEADER)
     print(f"{BOLD}Supported PDU Models:{RESET}\n")
-    all_drivers = registry.get_all("pdu")
+    all_drivers = dict(registry.get_all_drivers("pdu"))
     vendors: dict = {}
     for sig, cls in sorted(all_drivers.items()):
         if sig.startswith("dummy"):
@@ -51,7 +51,7 @@ def list_all_models():
 
 
 def run_vendor(vendor_name: str) -> bool:
-    all_drivers = registry.get_all("pdu")
+    all_drivers = dict(registry.get_all_drivers("pdu"))
     matches = {sig: cls for sig, cls in all_drivers.items()
                if sig.startswith(vendor_name.lower() + "_")}
     if not matches:
@@ -77,7 +77,7 @@ def run_vendor(vendor_name: str) -> bool:
 
 
 def run_all() -> bool:
-    all_drivers = registry.get_all("pdu")
+    all_drivers = dict(registry.get_all_drivers("pdu"))
     sigs = [(sig, cls) for sig, cls in sorted(all_drivers.items()) if not sig.startswith("dummy")]
     results = {}
     for sig, cls in sigs:
@@ -100,7 +100,7 @@ def run_all() -> bool:
 
 def interactive_menu():
     print(HEADER)
-    all_drivers = registry.get_all("pdu")
+    all_drivers = dict(registry.get_all_drivers("pdu"))
     sigs = sorted([sig for sig in all_drivers if not sig.startswith("dummy")])
     vendors = sorted(set(sig.split("_")[0].upper() for sig in sigs))
 
