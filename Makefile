@@ -19,15 +19,11 @@ deb: clean
 	cp iss_pdu_utility $(BUILD_DIR)/opt/$(PKG_NAME)/
 	cp iss_terminal_utility $(BUILD_DIR)/opt/$(PKG_NAME)/
 	cp iss_daq_utility $(BUILD_DIR)/opt/$(PKG_NAME)/
-	cp iss_trial_utility $(BUILD_DIR)/opt/$(PKG_NAME)/
-	cp iss_mock_server $(BUILD_DIR)/opt/$(PKG_NAME)/
 
 	# Make symlinks in /usr/bin
 	ln -s /opt/$(PKG_NAME)/iss_pdu_utility $(BUILD_DIR)/usr/bin/iss_pdu_utility
 	ln -s /opt/$(PKG_NAME)/iss_terminal_utility $(BUILD_DIR)/usr/bin/iss_terminal_utility
 	ln -s /opt/$(PKG_NAME)/iss_daq_utility $(BUILD_DIR)/usr/bin/iss_daq_utility
-	ln -s /opt/$(PKG_NAME)/iss_trial_utility $(BUILD_DIR)/usr/bin/iss_trial_utility
-	ln -s /opt/$(PKG_NAME)/iss_mock_server $(BUILD_DIR)/usr/bin/iss_mock_server
 
 	# Create DEBIAN/control
 	echo "Package: $(PKG_NAME)" > $(BUILD_DIR)/DEBIAN/control
@@ -55,4 +51,3 @@ release: deb
 		echo "Creating new GitHub release v$(VERSION)..."; \
 		gh release create v$(VERSION) *.deb --title "Release v$(VERSION)" --notes "Automated release of v$(VERSION)"; \
 	fi
-

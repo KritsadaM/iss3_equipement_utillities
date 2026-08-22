@@ -4,13 +4,11 @@ Command-line utilities to discover and control ISS3 equipments — PDUs, termina
 
 ## Utilities
 
-| Utility                | Equipment type   | Actions                                      |
-|-------------------------|------------------|----------------------------------------------|
-| `iss_pdu_utility`        | PDU              | `on`, `off`, `status` (live & `--mock` mode) |
-| `iss_trial_utility`      | PDU Diagnostics  | Blackbox trial simulation & raw response inspection |
-| `iss_mock_server`        | Equipment Server | Standalone local HTTP simulator for APC/WTI/Raritan |
-| `iss_terminal_utility`   | Terminal Server  | status dump                                  |
-| `iss_daq_utility`        | DAQ              | `start`, `stop`, `status`                    |
+| Utility                | Equipment type   | Actions                  |
+|-------------------------|------------------|---------------------------|
+| `iss_pdu_utility`        | PDU              | `on`, `off`, `status`      |
+| `iss_terminal_utility`   | Terminal Server  | status dump                |
+| `iss_daq_utility`        | DAQ              | `start`, `stop`, `status`  |
 
 ## Installation
 
@@ -25,60 +23,36 @@ Or build a `.deb` package (see [Packaging](#packaging) below) and install it on 
 ### PDU
 
 ```bash
-# Live hardware:
 iss_pdu_utility --ip_address 192.168.1.40 --port 80 on 3
 iss_pdu_utility --ip_address 192.168.1.40 --port 80 off 3
 iss_pdu_utility --ip_address 192.168.1.40 --port 80 status 3
-
-# Offline Mock Mode (zero hardware required):
-iss_pdu_utility --mock --model apc_ap7900 on 1
-iss_pdu_utility --mock --model wti_vmr_hd4d20 status 1-3
-iss_pdu_utility --mock --model raritan_px3_5460 off 5
 ```
 
-### Blackbox Trial Tool (Offline Mock Testing)
-
-Run manual or automated blackbox trials against any model to inspect raw JSON/text output and test driver logic without hardware:
+Multiple channels can be controlled simultaneously:
 
 ```bash
-# List all 57+ supported hardware models
-iss_trial_utility --list
+# Comma-separated list
+iss_pdu_utility --ip_address 192.168.1.40 --port 80 on 1,3,5
 
-# Run full 9-phase blackbox trial on a specific model
-iss_trial_utility --model apc_ap7900
-iss_trial_utility --model wti_vmr_hd4d20
-iss_trial_utility --model raritan_px3_5460
+# Range of channels
+iss_pdu_utility --ip_address 192.168.1.40 --port 80 on 1-4
 
-# Test specific action on simulated hardware and see RAW_OUTPUT:
-iss_trial_utility --model apc_ap7900 --action on --channel 1
-iss_trial_utility --model apc_ap7900 --action status --channel 1-3
-iss_trial_utility --model wti_vmr_hd4d20 --action off --channel 2
-
-# Trial all models for a specific vendor
-iss_trial_utility --vendor apc
-iss_trial_utility --vendor wti
-iss_trial_utility --vendor raritan
-
-# Trial all 57 models in the entire catalog
-iss_trial_utility --all
-
-# Launch interactive menu
-iss_trial_utility
+# All channels
+iss_pdu_utility --ip_address 192.168.1.40 --port 80 status all
 ```
 
-### Standalone Mock Equipment Server
-
-Start a persistent simulated HTTP server for testing `curl` or external scripts:
+### Terminal Server
 
 ```bash
-# Run APC mock server on port 8080
-iss_mock_server --vendor apc --port 8080
+iss_terminal_utility --ip_address 192.168.1.20 --port 22
+```
 
-# Run WTI mock server on port 8080
-iss_mock_server --vendor wti --port 8080
+### DAQ
 
-# Run Raritan mock server on port 8080
-iss_mock_server --vendor raritan --port 8080
+```bash
+iss_daq_utility --ip_address 192.168.1.30 --port 502 start
+iss_daq_utility --ip_address 192.168.1.30 --port 502 stop
+iss_daq_utility --ip_address 192.168.1.30 --port 502 status
 ```
 
 ### Credentials
@@ -134,31 +108,27 @@ response = driver.turn_on(3)
 ## Adding a new driver
 
 1. Create a new file under the right subfolder (`pdu/`, `terminal_server/`, or `daq/`) — it's auto-imported, no need to edit `__init__.py`.
-2. Subclass the matching interface (`PDUDriver`, `TerminalServerDriver`, or `DAQDriver`) from `equipment_drivers.interfaces`.
-3. Implement `probe(cls, ip, port) -> bool` with real vendor detection (SNMP OID, HTTP banner, etc.) — keep it read-only and fast, and make sure it returns `False` (not an exception) for devices that aren't a match.
-4. Register at the bottom of the file:
-   ```python
-   registry.register('pdu', 'your_vendor_sig', YourDriverClass)
-   ```
-5. Add tests under `tests/` following the pattern in `test_pdu_wti.py`.
+2. Subclass the corresponding base interface (`PDUDriver`, `TerminalServerDriver`, or `DAQDriver`) from `equipment_drivers.interfaces`.
+3. Implement `probe(cls, ip, port) -> bool`, `connect(...) -> bool`, `disconnect() -> bool`, and the equipment-specific action methods.
+4. Decorate the class with `@registry.register('<equipment_type>', '<driver_signature>')`.
+5. Add unit tests in `tests/`.
 
-## Testing
+## Running tests
 
 ```bash
 PYTHONPATH=$(pwd) python3 -m unittest discover tests
 ```
 
-## CI
-
-- **Jenkins** (`Jenkinsfile`) — runs the test suite, then `make release` to build and publish a `.deb` via GitHub CLI.
-- **GitHub Actions** (`.github/workflows/python-package.yml`) — installs dependencies, lints with `flake8`, and runs the test suite on every push.
-
 ## Packaging
 
+Build a Debian package:
+
 ```bash
-make deb          # Build the .deb locally
-make deb-docker    # Build inside a clean Ubuntu container
-make release       # Build and publish a GitHub release (requires `gh` CLI)
+make deb
 ```
 
-Installed layout: source under `/opt/iss-equipment-utillities/`, with `iss_pdu_utility`, `iss_terminal_utility`, and `iss_daq_utility` symlinked into `/usr/bin`.
+Or build inside Docker without installing debian packaging tools locally:
+
+```bash
+make deb-docker
+```
